@@ -1,5 +1,6 @@
 # Week 1 Notes — Binary Foundations & Python Networking
 
+##Day 1
 **Date:** 09-03-2026
 **Hours logged today:** 2
 
@@ -15,6 +16,8 @@
 ---------------------------------------------------------------
 
 
+
+##Day 2
 **Date:** 10-03-2026
 **Hours logged:** 4
 
