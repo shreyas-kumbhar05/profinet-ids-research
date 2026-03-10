@@ -14,4 +14,6 @@ latency low enough for real-time industrial deployment?
 Preprint will be posted to arXiv on completion.
 
 ## Author
-Shreyas Kumbhar — ORCID: 
+Shreyas Kumbhar
+ORCID: https://orcid.org/0009-0004-7610-9018
+GitHub: https://github.com/yourusername
