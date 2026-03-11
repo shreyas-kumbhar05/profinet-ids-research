@@ -105,3 +105,159 @@
 - Continue Linux Primer sections from Udemy course
 - Start Bandit levels 5 onwards
 - Begin looking at Python socket programming
+
+
+
+-----
+
+
+
+
+
+## Day 3 — 11-03-2026
+**Hours logged:** 2
+
+---
+
+### What I Studied
+- Intro to Hex (Udemy)
+- Intro to Encoding and Base64 (Udemy)
+- Linux Primer Two and Three (Udemy)
+- Bandit levels 4 to 7 (OverTheWire)
+
+---
+
+### Key Things I Learned
+
+#### Hexadecimal
+- Hexadecimal is a base-16 number system
+- Uses 0-9 for values 0-9 and A-F for values 10-15
+- Each hex digit represents exactly 4 bits — called a nibble
+- One byte (8 bits) = two hex digits
+- Example: 00000000 to 11111111 in binary = 0 to 255 in decimal 
+  = 00 to FF in hexadecimal
+- This is why PROFINET's EtherType field is written as 0x8892 — 
+  hex maps cleanly to bytes and is much more readable than binary
+
+#### Hex Dump
+- A hex dump is a hexadecimal representation of raw binary data 
+  from memory, a file, or a storage device
+- Used for debugging, reverse engineering, and digital forensics
+- Shows data in three columns: memory offset on the left, 
+  hex values in the middle, ASCII representation on the right
+  where characters are printable
+- More compact than binary — one byte shown as two hex digits 
+  instead of eight binary digits
+
+#### Base64
+- Base64 encodes binary data into printable ASCII characters
+- Used when binary data needs to travel through text-based systems 
+  like email or HTTP headers that cannot handle raw binary
+- Every 3 bytes of binary becomes 4 Base64 characters
+- Recognized Base64 immediately in Bandit — several levels 
+  use it to encode the password
+
+#### Linux Commands Learned Today
+
+- man — displays the manual for any command
+  Example: man ls, man cat
+  Usage: always check man before Googling a command
+
+- file — identifies what type of data is inside a file
+  Example: file readme → returns "ASCII text"
+  Example: file ./-file01 → returns "data" (not human readable)
+  Wildcards work: file ./-file* checks all files at once
+
+- find — locates files by name, type, size, owner, and more
+  Example: find ./ -name readme
+  Example: find ./ -name "readme*" (wildcard)
+  Example: find ./ -size 33c (c = bytes)
+  Example: find ./ -user bandit7
+  Parameters combine: find ./ -size 33c -user bandit7 -group bandit6
+  Note: add 2>/dev/null to suppress permission denied errors
+
+---
+
+### Bandit Levels 4 to 7
+
+- Bandit 4: find only human-readable file in inhere/ directory
+  Files named -file00 through -file09
+  Solution: file ./-file* — runs file command on all files at once
+  Result: -file07 returned "ASCII text" — all others returned "data"
+  Key learning: wildcards with file command let you check many 
+  files simultaneously instead of one by one
+  What I got stuck on: did not know ./-file* syntax would work 
+  with wildcards. Had to look up the solution. Now understand that 
+  * matches any characters after the prefix.
+
+- Bandit 5: find file that is human-readable, 1033 bytes, 
+  not executable
+  Solution: find . -type f -size 1033c ! -executable
+  Key learning: ! means NOT in find command — combining multiple 
+  flags narrows the search precisely
+
+- Bandit 6: file owned by user bandit7, group bandit6, 33 bytes,
+  stored somewhere on the server
+  Solution: find / -user bandit7 -group bandit6 -size 33c 2>/dev/null
+  Key learning: searching from / searches the entire filesystem.
+  2>/dev/null was essential — without it hundreds of 
+  "Permission denied" errors flooded the output making 
+  the result impossible to find
+
+- Bandit 7: word next to "millionth" in data.txt
+  Solution: grep "millionth" data.txt
+  Key learning: grep searches inside file contents for a string — 
+  far faster than reading a large file manually
+
+---
+
+### What Surprised Me Today
+
+- The man command works on C language functions, not just 
+  Linux commands. Running man gets shows the manual for the 
+  C gets() function — and explicitly warns that gets() will 
+  continue storing characters past the end of the buffer.
+  This is directly relevant to Project 3 — gets() is one of 
+  the most exploited functions in buffer overflow vulnerabilities.
+  The vulnerability is literally documented in the manual.
+
+- Wildcards work with the file command — file ./-file* checks 
+  all matching files at once. Did not expect this to work 
+  and it saved significant time on Bandit 4.
+
+---
+
+### Connections to the Project
+
+- file command identifying ASCII vs binary data is the same 
+  concept as feature extraction in Project 1 — distinguishing 
+  normal from anomalous based on data properties
+- man gets warning about buffer overflow connects directly 
+  to Project 3 — gets() will be one of the vulnerable 
+  functions I use to build my controlled test binary
+- 2>/dev/null stderr suppression will be useful when running 
+  Scapy scripts in Project 1 that generate permission warnings
+
+---
+
+### What I Did Not Complete Today
+- Did not finish Python socket documentation reading
+- Did not start port_scanner.py
+- These move to Day 4
+
+---
+
+### Questions I Still Have
+- Can find command search by file content, not just metadata?
+- How does grep handle very large files efficiently?
+- What exactly happens at the memory level when gets() 
+  writes past the buffer end?
+
+---
+
+### What I Plan to Do Tomorrow
+- Read Python socket documentation — focus on socket.socket(), 
+  connect_ex(), and settimeout()
+- Write port_scanner.py from scratch
+- Continue Linux Primer Four from Udemy
+- Attempt Bandit levels 8 and 9
