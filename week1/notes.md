@@ -261,3 +261,122 @@
 - Write port_scanner.py from scratch
 - Continue Linux Primer Four from Udemy
 - Attempt Bandit levels 8 and 9
+
+
+
+
+
+
+
+## Day 4 — Linux Data Processing & Encoding
+
+**Hours logged:** 2
+
+---
+
+###  Objective
+- Understand how Linux handles data streams, filtering, and encoding
+- Learn commands used for extracting and processing useful information from files
+
+---
+
+###  Concepts Learned
+
+#### Standard Streams & Redirection
+- `>` overwrites file content
+- `>>` appends content to file
+- Used to control output of commands
+
+#### Text Processing Commands
+- `grep` → search for patterns inside files
+- `grep -i` → ignore case sensitivity
+- `head` → first 10 lines
+- `tail` → last lines
+
+#### Command Chaining (Pipelines)
+- `|` passes output of one command to another
+- Example:
+  - `cat file | grep string`
+  - `cat file | sort | uniq -c | sort`
+
+#### Binary Data Extraction
+- `strings binaryfile | grep -i pico`
+- Extracts readable text from binary files
+
+#### File Management
+- `mkdir`, `rm -r`, `cp`, `mv`
+
+#### Compression & Archiving
+- `zip` → creates compressed copy
+- `zip -e` → password protected zip
+- `unzip` → extract zip
+- `gzip` → compresses and replaces original file
+- `gunzip` → decompresses
+- `tar -cf` → create archive
+- `tar -xvf` → extract archive
+
+#### Encoding & Utilities
+- `base64` → encode/decode data
+- `xxd` → binary to hex
+- `tr` → character transformation
+
+---
+
+###  Implementation / Practice
+- Used `grep` with files to filter specific strings
+- Practiced command chaining:
+  - `cat fasttrack.txt | sort | uniq -c`
+- Extracted readable strings from binary:
+  - `strings file | grep -i pico`
+- Tried compression using `zip` and `gzip`
+
+---
+
+###  Observations
+- Linux commands can be combined to form powerful data processing pipelines
+- `grep` is significantly faster than manually searching large files
+- Binary files are not completely unreadable — useful information can be extracted
+- `gzip` removes original file while `zip` keeps it
+
+---
+
+###  Connections (to Project / Cybersecurity)
+- `grep` + pipelines → similar to filtering data in IDS systems
+- `strings` → useful in malware analysis and CTF challenges
+- `base64` → commonly used in network protocols and data transfer
+- Compression → relevant for storing packet captures and datasets
+
+---
+
+### Questions / Doubts
+- How does `grep` efficiently search very large files?
+- What algorithm is used in `gzip` compression?
+- How does `strings` identify printable characters in binary?
+
+---
+
+###  Key Insights
+- Linux CLI tools act as a lightweight data processing engine
+- Small commands combined together can perform complex analysis
+- Many cybersecurity tools rely on these same basic principles
+
+---
+
+### Ideas / Future Experiments
+- Compare `grep` vs Python for searching large files
+- Use `strings` on real executable files and analyze output
+- Build a script that mimics basic `grep` functionality
+
+---
+
+### Next Steps
+- Learn Python socket programming
+- Build TCP client-server
+- Start port scanner implementation
+
+
+
+
+
+
+
