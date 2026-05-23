@@ -1,4 +1,4 @@
-## Day 1 — Week 2 — [date]
+## Day 1 — Week 2 — 23/05/2026
 **Hours logged:** 2
 **Focus:** Wireshark Introduction + First Live Capture
 
@@ -65,8 +65,7 @@
 
 ### First Live Capture — What I Did
 - Started a capture on my eth0 interface in Kali
-- Opened a browser and visited http://example.com (HTTP not HTTPS
-  so traffic is readable)
+- Opened a browser and visited https://www.kali.org/tools/
 - Stopped capture after 30 seconds
 - Applied filter: tcp to isolate TCP traffic
 - Found a complete TCP three-way handshake and read it manually:
