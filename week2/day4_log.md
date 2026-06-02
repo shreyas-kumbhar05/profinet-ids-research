@@ -1,7 +1,7 @@
 # Day 4 — Week 2 — 02/06/2026
 
 **Hours Logged:** 2  
-**Focus:** Introduction to TCPdump and Command-Line Traffic Analysis
+**Focus:** Introduction to TCPdump and Traffic Analysis
 
 ---
 
@@ -9,100 +9,92 @@
 
 - Introduction to TCPdump
 - Analyzing network traffic using TCPdump
-- Basic packet capture techniques
-- Traffic filtering using Berkeley Packet Filter (BPF) syntax
-- Reading and analyzing packet captures from the command line
+- Packet capture using command-line tools
+- Basic Berkeley Packet Filter (BPF) syntax
+- Reading and saving PCAP files
 
 ---
 
 # What TCPdump Is
 
-- TCPdump is a command-line packet analyzer used to capture and inspect network traffic. :contentReference[oaicite:0]{index=0}
-- It uses the libpcap library to capture packets from network interfaces. :contentReference[oaicite:1]{index=1}
-- Unlike Wireshark, TCPdump has no graphical interface and is designed for fast analysis from the terminal. :contentReference[oaicite:2]{index=2}
-- TCPdump can capture live traffic or read previously saved PCAP files. :contentReference[oaicite:3]{index=3}
+- TCPdump is a command-line packet analyzer
+- Uses the libpcap library for packet capture
+- Can capture live traffic or analyze saved PCAP files
+- Lightweight alternative to Wireshark
+- Commonly used on servers and remote systems
 
 ---
 
-# Why TCPdump Matters
+# Commands Learned
 
-- Useful on remote servers where Wireshark cannot be installed.
-- Lightweight and fast.
-- Ideal for SSH sessions.
-- Frequently used during incident response.
-- Can capture traffic for later analysis in Wireshark. :contentReference[oaicite:4]{index=4}
-
----
-
-# Basic Commands Learned
-
-## List Interfaces
+## List Available Interfaces
 
 ```bash
 tcpdump -D
 ```
 
-Shows available network interfaces. :contentReference[oaicite:5]{index=5}
+Displays all available capture interfaces.
 
 ---
 
-## Capture on a Specific Interface
+## Capture Traffic on an Interface
 
 ```bash
 sudo tcpdump -i eth0
 ```
 
-Captures packets on interface `eth0`.
+Captures packets from the selected interface.
 
 ---
 
-## Limit Number of Packets
+## Capture Limited Number of Packets
 
 ```bash
 sudo tcpdump -i eth0 -c 10
 ```
 
-Captures only 10 packets.
+Stops after capturing 10 packets.
 
 ---
 
-## Disable Name Resolution
+## Disable Hostname Resolution
 
 ```bash
 sudo tcpdump -i eth0 -nn
 ```
 
-Displays raw IP addresses and port numbers.
+Shows raw IP addresses and port numbers.
 
-Reason:
+Benefits:
 - Faster output
-- Avoids DNS lookups
-- Better for investigations
+- Easier investigation
+- No DNS lookup delays
 
 ---
 
-# Understanding TCPdump Output
+## Save Traffic to a PCAP File
 
-A packet entry typically contains:
-
-- Timestamp
-- Source IP
-- Destination IP
-- Protocol
-- Port numbers
-- Packet flags
-
-Example:
-
-```text
-12:15:30 IP 192.168.1.10.443 > 192.168.1.20.55000
+```bash
+sudo tcpdump -i eth0 -w capture.pcap
 ```
 
+Stores captured packets for later analysis.
+
 ---
 
-# Common Traffic Filters
+## Read a PCAP File
 
-## Capture Only TCP Traffic
+```bash
+tcpdump -r capture.pcap
+```
+
+Displays packets stored in a PCAP file.
+
+---
+
+# Filtering Traffic
+
+## Capture TCP Traffic
 
 ```bash
 tcpdump tcp
@@ -110,7 +102,7 @@ tcpdump tcp
 
 ---
 
-## Capture Only UDP Traffic
+## Capture UDP Traffic
 
 ```bash
 tcpdump udp
@@ -122,14 +114,6 @@ tcpdump udp
 
 ```bash
 tcpdump port 53
-```
-
----
-
-## Capture HTTP Traffic
-
-```bash
-tcpdump port 80
 ```
 
 ---
@@ -148,7 +132,7 @@ tcpdump port 443
 tcpdump host 192.168.1.10
 ```
 
-Shows traffic involving a specific host.
+Shows traffic involving the specified host.
 
 ---
 
@@ -172,53 +156,11 @@ Shows packets sent to the host.
 
 ---
 
-# Reading Saved PCAP Files
+# BPF Syntax
 
-## Open Existing Capture
+TCPdump uses Berkeley Packet Filter syntax.
 
-```bash
-tcpdump -r capture.pcap
-```
-
-Reads packets from a saved PCAP file. :contentReference[oaicite:6]{index=6}
-
----
-
-## Save Captured Traffic
-
-```bash
-tcpdump -i eth0 -w capture.pcap
-```
-
-Writes captured traffic to a PCAP file. :contentReference[oaicite:7]{index=7}
-
----
-
-# Key Concepts Learned
-
-## Capture Filters
-
-- Applied before packets are captured.
-- Reduce storage usage.
-- Improve capture performance.
-
-Examples:
-
-```bash
-tcpdump port 80
-```
-
-```bash
-tcpdump host 192.168.1.1
-```
-
----
-
-## BPF Syntax
-
-TCPdump uses Berkeley Packet Filter (BPF) syntax.
-
-Operators:
+Common operators:
 
 ```text
 and
@@ -232,52 +174,51 @@ Example:
 tcpdump host 192.168.1.10 and port 80
 ```
 
+Captures HTTP traffic involving the specified host.
+
 ---
 
-# Practical Observations
+# Key Observations
 
-- TCPdump is significantly faster than Wireshark for quick investigations.
-- The `-nn` option makes output much easier to read.
-- Most packet analysis tasks begin with filtering because raw traffic becomes overwhelming quickly.
-- TCPdump and Wireshark work well together:
-  - TCPdump captures traffic
-  - Wireshark performs deep analysis
+- Packet captures become difficult to analyze without filters.
+- The `-nn` option makes output significantly easier to read.
+- TCPdump is useful for quickly identifying traffic patterns.
+- Traffic can be captured using TCPdump and later analyzed in Wireshark.
+- Most investigations begin with broad filters and gradually narrow down.
 
 ---
 
 # What Surprised Me
 
-- TCPdump can perform meaningful investigations without a GUI.
-- Most packet captures become unreadable without filters.
-- Many professional analysts begin investigations with TCPdump before opening Wireshark.
-- The same PCAP file can be captured using TCPdump and analyzed later in Wireshark because both use libpcap-compatible formats. :contentReference[oaicite:8]{index=8}
+- Meaningful packet analysis can be performed entirely from the terminal.
+- TCPdump is much faster than Wireshark for quick investigations.
+- A few well-chosen filters can reduce thousands of packets to a manageable dataset.
+- TCPdump and Wireshark complement each other rather than replace each other.
 
 ---
 
 # Connection to Project 1
 
-- Week 2 requires packet capture and logging.
-- TCPdump provides another method for collecting packet data before processing it with Python.
-- Understanding BPF filtering will help reduce noise when capturing industrial traffic.
-- Future PROFINET captures can be filtered before feature extraction.
-- Capturing only relevant traffic reduces dataset size and preprocessing time.
+- TCPdump provides an additional method for collecting packet captures.
+- BPF filtering can reduce noise before feature extraction.
+- Capturing only relevant traffic will improve dataset quality.
+- Understanding packet capture workflows will help when collecting PROFINET traffic in later weeks.
 
 ---
 
 # Questions for Further Study
 
-- How does TCPdump capture packets internally using libpcap?
-- How can TCPdump filters be translated into Scapy sniff filters?
-- What are the performance differences between TCPdump and Wireshark on large captures?
-- Can TCPdump capture PROFINET traffic using EtherType filters?
+- Can TCPdump filter traffic using EtherType values?
+- How does TCPdump internally interact with libpcap?
+- How do TCPdump filters compare with Scapy sniff filters?
+- What are the limitations of TCPdump compared to Wireshark?
 
 ---
 
 # Goal for Next Session
 
 - Install Scapy
-- Learn packet layer construction
-- Understand:
+- Learn packet construction using:
   - Ether()
   - IP()
   - TCP()
@@ -287,4 +228,3 @@ tcpdump host 192.168.1.10 and port 80
   - send()
   - sendp()
 - Begin implementation of packet_logger.py
-- Capture packets and export them to CSV
