@@ -1,4 +1,4 @@
-# Day 4 — Week 2 — 27/05/2026
+# Day 4 — Week 2 — 02/06/2026
 
 **Hours Logged:** 2  
 **Focus:** Introduction to TCPdump and Command-Line Traffic Analysis
