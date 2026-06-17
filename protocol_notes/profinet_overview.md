@@ -1,588 +1,226 @@
-# Day 1 — Week 3 — PROFINET Fundamentals
+# PROFINET Protocol — Overview
 
-**Date:** 12/06/2026  
-**Hours Logged:** 2.5 Hours  
-**Focus:** Understanding PROFINET Architecture, Communication Model, and Security Relevance
+## What is PROFINET
 
----
-
-# Objective
-
-- Understand what PROFINET is and why it is used in industrial environments.
-- Learn the role of IO Controllers, IO Devices, and IO Supervisors.
-- Understand why PROFINET RT avoids TCP for real-time communication.
-- Study EtherType, FrameID, and CycleCounter.
-- Identify protocol fields that can later be used for anomaly detection.
+PROFINET (Process Field Network) is an Industrial Ethernet communication
+protocol used in automation systems. It enables communication between
+controllers and field devices such as sensors, actuators, motor drives,
+and robots. PROFINET is designed for deterministic and real-time
+industrial communication.
 
 ---
-
-# What is PROFINET
-
-## Definition
-
-- PROFINET (Process Field Network) is an Industrial Ethernet communication protocol used in automation systems.
-- It enables communication between controllers and field devices such as sensors, actuators, motor drives, and robots.
-- PROFINET is designed for deterministic and real-time industrial communication.
 
 ## Why PROFINET Exists
 
-Traditional office networks prioritize:
+Traditional office networks and industrial networks have fundamentally
+different priorities:
 
-- Reliability
-- Correctness
-- Data integrity
+| Property | Office Network | Industrial Network |
+|---|---|---|
+| Primary goal | Reliability and correctness | Deterministic timing |
+| Latency tolerance | High — 200ms acceptable | Very low — 1ms required |
+| Missing data | Retransmit and recover | Skip and use next update |
+| Timing variance | Acceptable | Dangerous |
 
-Industrial networks prioritize:
-
-- Deterministic timing
-- Predictable communication
-- Fast response times
-
-### Example
-
-```text
-Office Network:
-Open Website
-↓
-200 ms delay acceptable
-
-Industrial Network:
-Emergency Stop Signal
-↓
-200 ms delay may be dangerous
-```
-
-## Key Insight
-
-> Office Networks prioritize Reliability and Correctness.
->
-> Industrial Networks prioritize Determinism and Timing.
+**Key insight:** Office networks prioritize reliability and correctness.
+Industrial networks prioritize determinism and timing. A 200ms delay
+opening a webpage is inconvenient. A 200ms delay on an emergency stop
+signal can cause equipment damage or injury.
 
 ---
 
-# PROFINET Components
+## PROFINET Components
 
-## IO Controller
+### IO Controller
+- The decision-making component of the automation system
+- Typical device: PLC (Programmable Logic Controller)
+- Receives sensor data, executes control logic, sends commands to field devices
+- Example: A PLC reads temperature sensor data and decides when to activate
+  a cooling fan
 
-### Definition
+### IO Device
+- Interacts directly with the physical process
+- Examples: sensors, actuators, motor drives, valves, robots
+- Provides process data to the IO Controller and executes physical actions
+  based on received commands
 
-- The IO Controller is responsible for controlling the automation process.
-- It acts as the decision-making component of the system.
-
-### Typical Device
-
-- PLC (Programmable Logic Controller)
-
-### Responsibilities
-
-- Receives sensor data
-- Executes control logic
-- Sends commands to field devices
-- Controls industrial processes
-
-### Example
-
-```text
-Temperature Sensor
-        ↓
-       PLC
-        ↓
-   Cooling Fan
-```
-
-The PLC decides when the fan should be turned ON or OFF.
+### IO Supervisor
+- Performs monitoring, diagnostics, and configuration
+- Examples: engineering workstations, Siemens TIA Portal, maintenance laptops
+- Does not participate in real-time cyclic communication — operates
+  at a separate, lower priority
 
 ---
 
-## IO Device
+## Why PROFINET RT Does Not Use TCP
 
-### Definition
+TCP provides acknowledgements, retransmissions, flow control, and
+connection management. These mechanisms improve reliability but introduce
+latency, jitter, and unpredictable timing — exactly what industrial
+systems cannot tolerate.
 
-- IO Devices interact directly with the physical process.
+### The Core Problem with TCP in Industrial Systems
 
-### Examples
+Consider a PLC sending position updates to a robot arm every 1ms:
 
-- Sensors
-- Actuators
-- Motor Drives
-- Valves
-- Robots
+```
+Normal cyclic communication:
+Frame 10 → Frame 11 → Frame 12 → Frame 13 → Frame 14
 
-### Responsibilities
+If Frame 12 is lost over TCP:
+Frame 10 → Frame 11 → [wait] → [retransmit 12] → Frame 13 delayed
+```
 
-- Provide process data
-- Receive control commands
-- Execute physical actions
+The robot arm needs the **latest position**, not a historically complete
+sequence. Delaying Frame 13 and 14 while waiting for a retransmission
+of Frame 12 is worse than simply missing Frame 12.
+
+**Key insight:** In industrial systems, missing one update is often less
+harmful than delaying all future updates.
+
+### PROFINET RT Stack vs Traditional IT Stack
+
+```
+PROFINET RT:          Traditional IT:
+Ethernet              Ethernet
+    ↓                     ↓
+PROFINET RT               IP
+    ↓                     ↓
+Process Data              TCP
+                          ↓
+                      Application
+```
+
+By removing IP and TCP, PROFINET RT eliminates header parsing overhead,
+retransmission logic, connection state tracking, and ACK processing —
+resulting in lower latency and deterministic timing.
 
 ---
 
-## IO Supervisor
+## EtherType 0x8892
 
-### Definition
-
-- The IO Supervisor performs monitoring, diagnostics, and configuration.
-
-### Examples
-
-- Engineering Workstation
-- Siemens TIA Portal
-- Maintenance Laptop
-
-### Responsibilities
-
-- Configure devices
-- Upload PLC programs
-- Monitor network status
-- Perform diagnostics
-
----
-
-# Why PROFINET RT Does Not Use TCP
-
-## Problem with TCP
-
-TCP provides:
-
-- Acknowledgements (ACKs)
-- Retransmissions
-- Flow Control
-- Congestion Control
-- Connection Management
-
-These mechanisms improve reliability but introduce:
-
-- Latency
-- Jitter
-- Unpredictable timing
-
-## Industrial Requirement
-
-Industrial systems require:
-
-**Deterministic Communication**
-
-### Example
-
-```text
-PLC
-↓
-Robot Arm
-
-Position Update Every 1 ms
-```
-
-If packet 12 is lost:
-
-```text
-TCP:
-Wait
-↓
-Retransmit Packet 12
-↓
-Delay Packet 13 and 14
-```
-
-The robot arm is interested in:
-
-```text
-Latest Position
-```
-
-not
-
-```text
-Perfect Historical Accuracy
-```
-
-## Key Insight
-
-> Missing one update is often less harmful than delaying future updates.
-
-## Result
-
-PROFINET RT communicates directly over Ethernet and avoids TCP and UDP for real-time process data.
-
-### PROFINET RT Stack
-
-```text
-Ethernet
-↓
-PROFINET RT
-```
-
-### Traditional IT Stack
-
-```text
-Ethernet
-↓
-IP
-↓
-TCP
-↓
-Application
-```
-
----
-
-# EtherType
-
-## What is EtherType?
-
-- EtherType is a field inside the Ethernet header.
-- It tells the receiving device what protocol follows the Ethernet header.
-
-Without EtherType:
-
-```text
-Ethernet Header
-↓
-Unknown Payload
-```
-
-The receiver would not know which protocol parser to use.
-
-## Common EtherType Values
+EtherType is a 2-byte field inside the Ethernet header at bytes 12–13.
+It tells the receiving device what protocol follows the Ethernet header.
 
 | EtherType | Protocol |
-|------------|------------|
+|---|---|
 | 0x0800 | IPv4 |
 | 0x86DD | IPv6 |
 | 0x0806 | ARP |
 | 0x8892 | PROFINET RT |
 
-## EtherType 0x8892
+When a device sees `EtherType = 0x8892`, it knows to parse the following
+bytes as a PROFINET RT frame rather than an IP packet. This is the first
+field checked by the Wireshark PROFINET dissector (`packet-pn-rt.c`) to
+identify PROFINET traffic.
 
-When a device sees:
-
-```text
-EtherType = 0x8892
-```
-
-it knows:
-
-```text
-Ethernet
-↓
-PROFINET RT
-```
-
-follows next.
-
-## Performance Benefits
-
-### Traditional TCP Communication
-
-```text
-Ethernet
-↓
-IP
-↓
-TCP
-↓
-Application
-```
-
-Requires:
-
-- Header Parsing
-- Validation
-- State Tracking
-- ACK Processing
-- Retransmission Logic
-
-### PROFINET RT Communication
-
-```text
-Ethernet
-↓
-PROFINET RT
-↓
-Process Data
-```
-
-Benefits:
-
-- Lower Latency
-- Lower Jitter
-- More Predictable Timing
+**IDS relevance:** Any frame with `EtherType = 0x8892` must be inspected
+by the IDS. Any frame that bypasses this filter could indicate protocol
+abuse or a misconfigured device.
 
 ---
 
-# FrameID
+## FrameID
 
-## Problem
+PROFINET RT does not use TCP, UDP, or port numbers. FrameID solves the
+resulting identification problem — it tells the receiver what type of
+communication this frame carries.
 
-PROFINET RT does not use:
+- FrameID acts as an application-layer identifier within PROFINET
+- One PLC communicating with multiple devices uses different FrameIDs
+  for each communication stream (temperature data, motor commands,
+  emergency stop data)
+- FrameID identifies the **type** of communication, not individual packets
 
-- TCP
-- UDP
-- Port Numbers
+### FrameID Ranges
 
-Therefore, the receiver needs another method to identify communication streams.
+| Range | Class | Meaning |
+|---|---|---|
+| 0x0020–0x007F | RT Class 3 IRT | Isochronous real-time |
+| 0x8000–0xBFFF | RT Class 1/2/3 | Standard real-time cyclic |
+| 0xC000–0xFBFF | Acyclic RT | Alarms and events |
 
-## Solution
-
-FrameID identifies the purpose of a PROFINET communication stream.
-
-Think of FrameID as:
-
-- Application Identifier
-- Conversation Identifier
-
-within PROFINET.
-
-## Example
-
-PLC communicating with:
-
-```text
-Temperature Sensor
-Motor Drive
-Emergency Stop Module
-```
-
-FrameID helps distinguish:
-
-```text
-Temperature Data
-Motor Commands
-Emergency Stop Data
-```
-
-## Important Note
-
-FrameID does **NOT** identify individual packets.
-
-FrameID identifies:
-
-```text
-Type of Communication
-```
-
-## IDS Relevance
-
-Potential anomalies include:
-
-- Unknown FrameID
-- Missing FrameID
-- Unexpected FrameID frequency
-- New FrameID appearing in established traffic
+### IDS Relevance
+- Unknown FrameID appearing in established traffic → potential protocol abuse
+- New FrameID not seen during baseline period → unexpected device or connection
+- Unexpected FrameID frequency → timing anomaly
 
 ---
 
-# CycleCounter
+## CycleCounter
 
-## Problem
+PROFINET RT does not use TCP sequence numbers. CycleCounter fills this
+role — it gives the receiver a way to detect missing, duplicated, or
+out-of-order frames.
 
-PROFINET RT does not use TCP sequence numbers.
-
-The receiver still needs to know:
-
-- Is this the newest update?
-- Was an update missed?
-- Was a frame duplicated?
-
-## Solution
-
-PROFINET uses CycleCounter.
-
-CycleCounter acts as:
-
-```text
-Cycle Number
+### Normal CycleCounter Behavior
+```
+Frame 1: CycleCounter = 100
+Frame 2: CycleCounter = 101
+Frame 3: CycleCounter = 102
+Frame 4: CycleCounter = 103
 ```
 
-for cyclic communication.
+### Anomalous Patterns
 
-## Example
+| Pattern | Example | Meaning |
+|---|---|---|
+| Missing cycles | 100, 101, 106 | Frames dropped or filtered |
+| Duplicate cycles | 100, 101, 101 | Replay attack or retransmission |
+| Counter jump | 100, 101, 850 | Spoofed frame from different session |
+| Unexpected reset | 100, 101, 0 | Device restart or spoofed frame |
 
-### Normal Communication
-
-```text
-100
-101
-102
-103
-104
-105
-```
-
-### Missing Cycles
-
-```text
-100
-101
-102
-106
-107
-```
-
-Missing:
-
-```text
-103
-104
-105
-```
-
-### Duplicate Cycles
-
-```text
-100
-101
-102
-102
-103
-```
-
-## Temporal Consistency
-
-CycleCounter helps determine:
-
-```text
-Is communication occurring exactly as expected?
-```
-
-This property is called:
-
-**Temporal Consistency**
-
-## Why CycleCounter Is Valuable
-
-FrameID tells us:
-
-```text
-WHAT communication this is.
-```
-
-CycleCounter tells us:
-
-```text
-WHETHER communication is behaving normally.
-```
-
-## IDS Relevance
-
-Potential anomalies:
-
-- Missing Cycles
-- Duplicate Cycles
-- Repeated Values
-- Counter Jumps
-- Unexpected Resets
+CycleCounter provides **temporal consistency** — the ability to verify
+that communication is occurring exactly as expected, at the expected rate,
+with no gaps or repetitions.
 
 ---
 
-# Security Observations
+## Security Observations
 
-## Observation 1 — Anomaly ≠ Attack
+### Anomaly ≠ Attack
+An anomaly indicates behavior that differs from the established baseline.
+The cause may be an attack, device failure, network issue, maintenance
+activity, or configuration change. An anomaly requires investigation —
+it does not confirm an attack.
 
-An anomaly indicates:
+### Engineering Workstations Are High-Value Targets
+Compromising an engineering workstation may allow an attacker to modify
+PLC logic, reconfigure devices, or upload malicious programs without
+ever sending anomalous network traffic — because all commands arrive
+through legitimate channels.
 
-```text
-Behavior differs from established baseline.
-```
+### Valid Packets ≠ Safe Operations
+Technically valid PROFINET frames can carry operationally dangerous
+commands. Network-layer IDS can detect structural anomalies but cannot
+validate whether process commands are physically safe.
 
-An anomaly may be caused by:
-
-- Attack
-- Device Failure
-- Network Issue
-- Maintenance Activity
-- Configuration Change
-
-Therefore:
-
-```text
-Anomaly = Investigation Required
-```
-
-not
-
-```text
-Attack Confirmed
-```
+### Late Data Can Be More Dangerous Than Missing Data
+Industrial systems depend on predictable timing. A delayed control update
+can cause incorrect decisions, process instability, equipment damage,
+or safety risks. This is why timing features are the most important
+features in this IDS design.
 
 ---
 
-## Observation 2 — Engineering Workstations Are High-Value Targets
+## IDS Feature Map
 
-Compromising an engineering workstation may allow attackers to:
-
-- Modify PLC Logic
-- Reconfigure Devices
-- Upload Malicious Programs
-- Change Process Parameters
-
-without directly attacking the PLC.
-
----
-
-## Observation 3 — Valid Packets ≠ Safe Operations
-
-In industrial environments:
-
-```text
-Valid Network Traffic
-```
-
-does not always mean:
-
-```text
-Safe Physical Behavior
-```
-
-Commands may be technically valid but operationally dangerous.
+| Feature Category | Specific Feature | What it Detects |
+|---|---|---|
+| Timing | Inter-arrival time (IAT) mean | Cycle rate changes |
+| Timing | IAT variance | Timing jitter anomalies |
+| Timing | Frames per second | Flood or suppression attacks |
+| Protocol | FrameID value | Unknown communication streams |
+| Protocol | FrameID frequency | Unexpected frame rate per stream |
+| Integrity | CycleCounter delta | Replay, missing, out-of-order frames |
+| Integrity | CycleCounter jump magnitude | Spoofed frames from other sessions |
+| State | DataStatus value | Device state changes |
+| State | TransferStatus value | Communication health changes |
 
 ---
 
-## Observation 4 — Late Data Can Be More Dangerous Than Missing Data
+## Sources
 
-Industrial systems depend on predictable timing.
-
-A delayed update may cause:
-
-- Incorrect Decisions
-- Process Instability
-- Equipment Damage
-- Safety Risks
-
----
-
-# Project Connections
-
-## Future IDS Features
-
-### Timing Features
-
-- Cycle Time
-- Frames Per Second
-- Cycle Time Variance
-- Inter-Packet Timing
-
-### Protocol Features
-
-- FrameID
-- FrameID Frequency
-- Unknown FrameID Count
-- Missing FrameID Count
-
-### Integrity Features
-
-- Missing CycleCounter Count
-- Duplicate CycleCounter Count
-- CycleCounter Jumps
-- Unexpected Counter Resets
-
----
-
-# Key Takeaways
-
-1. PROFINET is an Industrial Ethernet protocol designed for deterministic communication.
-2. Industrial systems prioritize timing and predictability over perfect reliability.
-3. PROFINET RT avoids TCP to reduce latency and jitter.
-4. EtherType 0x8892 identifies PROFINET RT traffic.
-5. FrameID identifies the purpose of a communication stream.
-6. CycleCounter helps detect missing, duplicated, or abnormal communication cycles.
-7. Industrial IDS design focuses heavily on timing, consistency, and baseline behavior.
-8. Anomaly detection does not automatically imply an attack.
+- Wireshark PROFINET dissector: `github.com/wireshark/wireshark` → `packet-pn-rt.c`
+- CISA ICS advisories: `cisa.gov/ics-advisories` (search PROFINET)
+- See `protocol_notes/sources.md` for full source list
