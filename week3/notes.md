@@ -758,3 +758,368 @@ Field semantics studied using:
 
 Exact field ranges and some implementation-specific details will be verified later using captured PROFINET traffic.
 
+
+
+
+# Day 3 — Week 3 — Building a Minimal PROFINET RT Frame
+
+**Date:** 23/06/2026  
+**Hours Logged:** 3 Hours  
+**Focus:** Constructing, Inspecting, and Validating a Minimal PROFINET RT Ethernet Frame
+
+---
+
+# Objective
+
+The objective of Day 3 was to move from protocol theory to protocol construction.
+
+Previous days focused on:
+
+```text
+PROFINET Architecture
+↓
+Frame Structure
+↓
+Frame Fields
+↓
+IDS-Relevant Metadata
+```
+
+Day 3 focused on:
+
+```text
+Protocol Knowledge
+↓
+Frame Construction
+↓
+Frame Inspection
+↓
+Frame Validation
+```
+
+The goal was to manually construct a valid PROFINET RT frame and understand how each protocol field appears in raw Ethernet traffic.
+
+---
+
+# Research Motivation
+
+Industrial Intrusion Detection Systems ultimately operate on packets captured from the network.
+
+Before analyzing industrial traffic, it is necessary to understand:
+
+- How a valid PROFINET RT frame is structured
+- Which fields appear in the frame
+- How protocol parsers interpret those fields
+- How abnormal values might be detected
+
+Building a frame manually provides a deeper understanding than only observing traffic in Wireshark.
+
+---
+
+# PROFINET RT Frame Construction
+
+A minimal PROFINET RT frame was implemented using Scapy and Python.
+
+The generated frame contains:
+
+```text
+Ethernet Header
+↓
+PROFINET RT Header
+↓
+Simulated Cyclic IO Data
+```
+
+---
+
+## Ethernet Header
+
+The Ethernet header contains:
+
+| Field | Size |
+|---------|---------|
+| Destination MAC | 6 Bytes |
+| Source MAC | 6 Bytes |
+| EtherType | 2 Bytes |
+
+EtherType was set to:
+
+```text
+0x8892
+```
+
+which identifies the frame as PROFINET RT traffic.
+
+---
+
+## PROFINET RT Header
+
+The custom PROFINET RT header contains:
+
+| Field | Size |
+|---------|---------|
+| FrameID | 2 Bytes |
+| CycleCounter | 2 Bytes |
+| DataStatus | 1 Byte |
+| TransferStatus | 1 Byte |
+
+Total header size:
+
+```text
+2 + 2 + 1 + 1 = 6 Bytes
+```
+
+---
+
+## Cyclic IO Payload
+
+The frame includes a simulated IO payload.
+
+```python
+bytes(payload_size)
+```
+
+was used to generate zero-filled process data.
+
+This payload does not represent a real PLC process image.
+
+Instead, it serves as placeholder cyclic data so that the generated frame resembles real industrial traffic.
+
+---
+
+# Header Field Selection
+
+## FrameID
+
+Selected value:
+
+```text
+0x8001
+```
+
+Reason:
+
+- Falls inside the valid RT communication range.
+- Represents cyclic real-time communication.
+- Suitable for testing and packet inspection.
+
+---
+
+## CycleCounter
+
+Initial value:
+
+```text
+0
+```
+
+Reason:
+
+- Simplifies debugging.
+- Future traffic generators can increment the value automatically.
+
+---
+
+## DataStatus
+
+Selected value:
+
+```text
+0x35
+```
+
+Reason:
+
+- Represents valid operational process data.
+- Provides a realistic starting point for frame construction.
+
+---
+
+## TransferStatus
+
+Selected value:
+
+```text
+0x00
+```
+
+Reason:
+
+- Indicates successful transfer state.
+- Simplifies validation testing.
+
+---
+
+# Frame Inspection
+
+A dedicated inspection function was implemented.
+
+The purpose of this function is to:
+
+- Extract protocol fields from raw packet bytes
+- Decode values into human-readable form
+- Verify that construction logic matches protocol expectations
+
+Displayed information includes:
+
+- Source MAC
+- Destination MAC
+- EtherType
+- FrameID
+- CycleCounter
+- DataStatus
+- TransferStatus
+- Frame Length
+
+The frame is additionally displayed as a hexadecimal dump.
+
+---
+
+# Understanding Raw Packet Bytes
+
+The generated frame produced the following initial bytes:
+
+```text
+01 0e cf 00 00 00
+08 00 27 a0 f4 9c
+88 92
+80 01
+00 00
+35
+00
+```
+
+These correspond to:
+
+```text
+Destination MAC
+Source MAC
+EtherType
+FrameID
+CycleCounter
+DataStatus
+TransferStatus
+```
+
+This demonstrates that protocol fields are ultimately represented as raw bytes and that Wireshark reconstructs protocol information by parsing those bytes according to protocol definitions.
+
+---
+
+# Frame Validation
+
+A validation stage was implemented before transmission.
+
+Validation checks included:
+
+- EtherType correctness
+- Minimum payload length
+- Valid FrameID range
+- TransferStatus correctness
+- PROFINET multicast destination
+
+Example output:
+
+```text
+[PASS] EtherType is 0x8892
+[PASS] Payload >= 6 bytes
+[PASS] FrameID in RT range
+[PASS] TransferStatus is 0x00
+[PASS] Dst MAC is PROFINET multicast
+```
+
+This step ensures that malformed frames are detected before traffic generation.
+
+---
+
+# IDS Perspective
+
+Several fields created during frame construction are directly relevant to anomaly detection.
+
+## FrameID
+
+Potential indicators:
+
+- Unknown FrameID
+- Unexpected FrameID appearance
+- Missing expected FrameIDs
+
+---
+
+## CycleCounter
+
+Potential indicators:
+
+- Missing cycles
+- Duplicate cycles
+- Replay attacks
+- Unexpected resets
+
+---
+
+## DataStatus
+
+Potential indicators:
+
+- Device faults
+- Invalid process data
+- Unexpected operational state changes
+
+---
+
+## TransferStatus
+
+Potential indicators:
+
+- Communication degradation
+- Transfer failures
+- Protocol state changes
+
+---
+
+# Key Technical Insight
+
+A PROFINET RT frame is fundamentally:
+
+```text
+Ethernet
++
+Protocol Metadata
++
+Process Data
+```
+
+The protocol metadata is relatively small compared to the process payload, yet those few bytes contain most of the information required for protocol analysis and anomaly detection.
+
+---
+
+# Connection to Week 4
+
+This implementation becomes the foundation of the future traffic generator.
+
+Planned evolution:
+
+```text
+Static Frame
+↓
+Repeated Transmission
+↓
+Incrementing CycleCounter
+↓
+Traffic Generation
+↓
+Baseline Industrial Dataset
+```
+
+The `build_profinet_rt_frame()` function will be reused by future generators to create realistic cyclic industrial traffic for IDS research.
+
+---
+
+# Key Takeaways
+
+1. A valid PROFINET RT frame can be manually constructed using Scapy.
+2. EtherType 0x8892 identifies PROFINET RT traffic at Layer 2.
+3. FrameID, CycleCounter, DataStatus, and TransferStatus form the core protocol metadata.
+4. Raw packet bytes directly correspond to protocol fields observed in Wireshark.
+5. Validation is necessary before traffic generation.
+6. Protocol metadata provides valuable features for future anomaly detection models.
+7. This frame constructor forms the basis for future industrial traffic simulation and IDS dataset generation.
