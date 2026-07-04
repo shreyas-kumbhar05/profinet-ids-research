@@ -1123,3 +1123,253 @@ The `build_profinet_rt_frame()` function will be reused by future generators to 
 5. Validation is necessary before traffic generation.
 6. Protocol metadata provides valuable features for future anomaly detection models.
 7. This frame constructor forms the basis for future industrial traffic simulation and IDS dataset generation.
+
+
+
+
+
+# Day 4 — Week 3 — Frame Annotation and Protocol Feature Engineering
+
+**Date:** 02/07/2026  
+**Hours Logged:** 3 Hours  
+**Focus:** Annotating every byte of a PROFINET RT frame and connecting protocol fields to future IDS features.
+
+---
+
+# Objective
+
+The objective of Day 4 was to move from simply understanding the PROFINET protocol to understanding every transmitted byte and documenting how each field contributes to industrial anomaly detection.
+
+Rather than viewing a packet as raw hexadecimal values, the goal was to interpret every byte as protocol information that can later become a measurable feature for machine learning.
+
+---
+
+# Research Motivation
+
+- Byte-level protocol understanding is essential before attempting protocol-aware IDS development.
+- Every protocol field represents meaningful industrial information rather than arbitrary data.
+- Statistical baseline features used by machine learning originate directly from protocol fields.
+- A protocol engineer should be capable of interpreting a hex dump without relying entirely on Wireshark.
+
+---
+
+# Understanding the Purpose of `frame_annotation.md`
+
+A hexadecimal dump initially appears as a sequence of bytes:
+
+```text
+01 0e cf 00 00 00
+08 00 27 a0 f4 9c
+88 92
+80 01
+00 00
+35
+00
+```
+
+The purpose of `frame_annotation.md` is to translate those bytes into protocol meaning.
+
+Every frame should be decomposed into:
+
+- Destination MAC
+- Source MAC
+- EtherType
+- FrameID
+- CycleCounter
+- DataStatus
+- TransferStatus
+- Cyclic IO Data
+
+This document serves as evidence of protocol-level understanding and provides a foundation for future protocol analysis.
+
+---
+
+# Understanding the Ethernet Layer
+
+The Ethernet header answers three fundamental questions.
+
+```text
+Who transmitted the frame?
+↓
+
+Source MAC
+
+Who should receive it?
+↓
+
+Destination MAC
+
+Which protocol follows?
+↓
+
+EtherType
+```
+
+Unlike conventional enterprise traffic, PROFINET RT relies directly on Ethernet. Consequently, the Ethernet header becomes significantly more important because no IP or TCP layer exists between Ethernet and the industrial protocol.
+
+---
+
+# Understanding the PROFINET RT Header
+
+Immediately after the Ethernet header, six bytes define the PROFINET RT header.
+
+```text
+80 01
+00 00
+35
+00
+```
+
+These bytes represent:
+
+```text
+FrameID
+↓
+
+CycleCounter
+↓
+
+DataStatus
+↓
+
+TransferStatus
+```
+
+Each field describes a different aspect of industrial communication.
+
+- FrameID identifies the communication stream.
+- CycleCounter describes temporal behaviour.
+- DataStatus describes process validity.
+- TransferStatus describes communication health.
+
+---
+
+# FrameID as a Semantic Feature
+
+FrameID was deliberately selected as `0x8001` because it lies within the valid RT communication range while remaining easy to recognize during debugging.
+
+FrameID does not identify individual packets.
+
+Instead, it identifies the communication stream or service associated with the frame.
+
+Unexpected FrameIDs may indicate:
+
+- Unknown communication
+- Protocol misuse
+- Configuration changes
+- Malformed frames
+
+---
+
+# CycleCounter as a Temporal Feature
+
+CycleCounter represents communication sequence rather than process data.
+
+Under normal operation:
+
+```text
+0
+↓
+
+1
+↓
+
+2
+↓
+
+3
+↓
+
+4
+```
+
+Possible anomalies include:
+
+- Duplicate values
+- Missing values
+- Counter jumps
+- Counter resets
+
+These temporal characteristics make CycleCounter one of the most valuable protocol fields for anomaly detection.
+
+---
+
+# Research Insight
+
+Industrial IDS systems rarely depend upon a single protocol field.
+
+Instead, multiple categories of features are combined.
+
+```text
+Semantic Features
++
+
+Temporal Features
++
+
+Statistical Features
+↓
+
+Industrial Anomaly Detection
+```
+
+Examples include:
+
+Semantic Features
+
+- FrameID
+- EtherType
+
+Temporal Features
+
+- CycleCounter
+- Inter-arrival Time
+
+Statistical Features
+
+- EtherType frequency
+- FrameID frequency
+- CycleCounter distribution
+- Timing variance
+
+---
+
+# Important Observation
+
+Every protocol field serves a different engineering purpose.
+
+| Field | Purpose |
+|--------|----------|
+| Source MAC | Device Identity |
+| Destination MAC | Communication Target |
+| EtherType | Protocol Identification |
+| FrameID | Communication Type |
+| CycleCounter | Temporal Consistency |
+| DataStatus | Process State |
+| TransferStatus | Communication Health |
+
+An industrial IDS gains significantly more accuracy by correlating these independent protocol features rather than analysing a single field in isolation.
+
+---
+
+# Connection to Future Work
+
+The protocol fields documented today will become direct inputs to the future feature extraction pipeline.
+
+Examples include:
+
+- Known Source MAC verification
+- Unexpected EtherType detection
+- FrameID validation
+- CycleCounter delta calculation
+- DataStatus monitoring
+- TransferStatus validation
+- Timing feature extraction
+
+These protocol-aware features will later be used by statistical methods and machine learning models to distinguish normal industrial communication from anomalous behaviour.
+
+---
+
+# Key Insight
+
+Understanding a protocol means understanding every transmitted byte, why that byte exists, what engineering problem it solves, and how it can later be transformed into a measurable feature for anomaly detection.
