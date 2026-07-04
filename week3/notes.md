@@ -1130,7 +1130,7 @@ The `build_profinet_rt_frame()` function will be reused by future generators to 
 
 # Day 4 — Week 3 — Frame Annotation and Protocol Feature Engineering
 
-**Date:** 02/07/2026  
+**Date:** 04/07/2026  
 **Hours Logged:** 3 Hours  
 **Focus:** Annotating every byte of a PROFINET RT frame and connecting protocol fields to future IDS features.
 
