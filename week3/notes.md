@@ -1373,3 +1373,341 @@ These protocol-aware features will later be used by statistical methods and mach
 # Key Insight
 
 Understanding a protocol means understanding every transmitted byte, why that byte exists, what engineering problem it solves, and how it can later be transformed into a measurable feature for anomaly detection.
+
+
+
+---
+
+
+# Day 5 — Week 3 — Statistical Baseline for PROFINET RT Communication
+
+**Date:** 07/07/2026  
+**Hours Logged:** 2.5 Hours  
+**Focus:** Understanding cyclic communication, timing behaviour, statistical baseline modelling, and feature engineering for Industrial Intrusion Detection Systems (IDS).
+
+---
+
+# Objective
+
+The objective of today's study was to understand how deterministic communication in PROFINET RT enables statistical anomaly detection. Rather than analysing individual protocol fields alone, the focus shifted towards modelling communication behaviour over time and identifying which statistical properties can later be transformed into machine learning features.
+
+---
+
+# From Protocol Analysis to Statistical Analysis
+
+During the previous days, the protocol was studied at the frame level.
+
+```text
+Ethernet
+        ↓
+PROFINET RT Header
+        ↓
+FrameID
+CycleCounter
+DataStatus
+TransferStatus
+```
+
+Today's focus expanded beyond individual packets.
+
+Instead of asking:
+
+> "What does this packet contain?"
+
+the question becomes:
+
+> "Is this packet behaving consistently with the communication pattern observed over hundreds or thousands of previous packets?"
+
+This transition marks the beginning of feature engineering for anomaly detection.
+
+---
+
+# Understanding Cyclic Communication
+
+Unlike traditional enterprise networks where communication occurs only when requested, PROFINET RT continuously exchanges process data at predefined time intervals.
+
+```text
+IO Controller
+        ↓
+IO Device
+        ↓
+IO Controller
+        ↓
+IO Device
+        ↓
+Repeat
+```
+
+The communication continues throughout system operation regardless of user interaction.
+
+This deterministic behaviour creates highly predictable network traffic that is particularly suitable for statistical anomaly detection.
+
+---
+
+# Why 4 ms Was Selected
+
+Although PROFINET supports communication cycles as low as 1 ms, this project adopts a 4 ms communication cycle.
+
+Reasons include:
+
+- Represents a realistic industrial deployment.
+- Produces approximately 250 frames per second.
+- Reduces CPU overhead during software-based traffic generation.
+- Produces manageable dataset sizes.
+- Maintains sufficient temporal resolution for anomaly detection experiments.
+
+The selected cycle therefore balances realism, computational efficiency, and experimental reproducibility.
+
+---
+
+# Understanding Inter-Arrival Time (IAT)
+
+Inter-Arrival Time (IAT) represents the elapsed time between two consecutive packets.
+
+Example:
+
+```text
+Frame Arrival Times
+
+0 ms
+4 ms
+8 ms
+12 ms
+16 ms
+
+↓
+
+Inter-Arrival Time
+
+4 ms
+4 ms
+4 ms
+4 ms
+```
+
+Instead of learning absolute timestamps, an Industrial IDS learns the statistical distribution of these timing differences.
+
+When communication timing changes unexpectedly,
+
+```text
+4 ms
+4 ms
+8 ms
+4 ms
+```
+
+the deviation may indicate:
+
+- Network congestion
+- Device processing delay
+- Switch buffering
+- Packet loss
+- Denial-of-Service
+- Man-in-the-Middle forwarding delay
+- Frame injection
+
+An abnormal IAT therefore represents an anomaly requiring investigation rather than direct evidence of an attack.
+
+---
+
+# Understanding Jitter
+
+Real industrial communication is deterministic but never perfectly periodic.
+
+Small timing variations naturally occur because of:
+
+- Operating system scheduling
+- Network interface processing
+- Ethernet switch forwarding delay
+- Hardware clock inaccuracies
+- Buffering delays
+
+These small timing variations are collectively referred to as **jitter**.
+
+Consequently, realistic industrial communication should exhibit low but non-zero timing variation.
+
+---
+
+# Gaussian Jitter
+
+The traffic generator models realistic communication timing using a Gaussian distribution.
+
+```python
+random.gauss(4.0, 0.3)
+```
+
+where:
+
+- Mean = 4.0 ms
+- Standard deviation = 0.3 ms
+
+This produces timing values concentrated around the expected communication cycle while preserving realistic timing variation.
+
+Example:
+
+```text
+3.97 ms
+4.03 ms
+3.99 ms
+4.05 ms
+4.01 ms
+```
+
+Compared to perfectly periodic communication:
+
+```text
+4.00 ms
+4.00 ms
+4.00 ms
+4.00 ms
+```
+
+Gaussian jitter produces traffic that more closely resembles real industrial deployments.
+
+---
+
+# Statistical Baseline
+
+Industrial IDS does not learn individual packets.
+
+Instead, it learns the statistical characteristics of normal communication.
+
+Examples include:
+
+| Feature | Expected Behaviour |
+|----------|-------------------|
+| Mean IAT | Approximately 4 ms |
+| IAT Standard Deviation | Low |
+| Frame Length | Constant |
+| Source MAC | Fixed |
+| Destination MAC | Fixed |
+| FrameID | Stable |
+| CycleCounter Delta | +1 |
+| DataStatus | Stable |
+
+These measurements collectively define the normal communication baseline.
+
+Future observations are compared against this baseline to determine whether communication remains consistent with expected industrial behaviour.
+
+---
+
+# Feature Categories for Industrial IDS
+
+The protocol fields studied throughout Week 3 naturally form several feature categories.
+
+## Identity Features
+
+- Source MAC
+- Destination MAC
+
+Purpose:
+
+Verify that communication originates from expected industrial devices.
+
+---
+
+## Semantic Features
+
+- EtherType
+- FrameID
+
+Purpose:
+
+Describe the protocol and communication purpose.
+
+---
+
+## Temporal Features
+
+- CycleCounter
+- Inter-Arrival Time (IAT)
+
+Purpose:
+
+Measure timing consistency and sequential behaviour.
+
+---
+
+## Statistical Features
+
+Derived from multiple packets rather than extracted directly from a single frame.
+
+Examples include:
+
+- Mean IAT
+- IAT Standard Deviation
+- Frame Rate
+- FrameID Frequency
+- CycleCounter Delta Distribution
+
+These statistical features provide the numerical representation required by machine learning algorithms.
+
+---
+
+# Research Insight
+
+One of the most important observations made during today's study is that machine learning algorithms do not understand industrial protocols directly.
+
+Instead, protocol fields are transformed into numerical features.
+
+Example:
+
+```text
+PROFINET Frame
+        ↓
+Feature Extraction
+        ↓
+CycleCounter Delta
+Inter-Arrival Time
+Frame Rate
+FrameID Frequency
+Source MAC
+Destination MAC
+        ↓
+Machine Learning Dataset
+        ↓
+Anomaly Detection Model
+```
+
+Consequently, the effectiveness of an Industrial IDS depends heavily on the quality of feature engineering rather than on the machine learning algorithm alone.
+
+---
+
+# Connection to Future Work
+
+Today's work establishes the statistical baseline that will support the remaining phases of the project.
+
+Week 4:
+
+- Generate deterministic PROFINET RT traffic.
+
+Week 5:
+
+- Extract statistical protocol features.
+
+Week 6:
+
+- Build normal communication datasets.
+
+Week 7–8:
+
+- Train anomaly detection models using the generated baseline.
+
+The baseline developed today therefore forms the foundation for all subsequent machine learning experiments.
+
+---
+
+# Key Takeaways
+
+1. PROFINET RT produces deterministic cyclic communication that is well suited for anomaly detection.
+2. Inter-Arrival Time (IAT) is one of the most valuable timing features in Industrial IDS.
+3. Small timing variations (jitter) are normal and should be incorporated into baseline traffic generation.
+4. Gaussian jitter provides a realistic simulation of industrial communication timing.
+5. Industrial IDS combines identity, semantic, temporal, and statistical features to characterize normal communication.
+6. Feature engineering provides the bridge between raw network packets and machine learning models.
+7. A well-defined statistical baseline is essential for accurate anomaly detection in industrial control systems.
+
+
+
+
+
