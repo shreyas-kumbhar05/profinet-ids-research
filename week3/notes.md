@@ -1,3 +1,116 @@
+# Week 3 — PROFINET RT Protocol Study
+
+## Weekly Summary
+
+Week 3 marked the transition from general packet analysis to protocol-specific research. The objective of this week was not only to understand the theoretical concepts behind PROFINET RT, but also to validate that understanding through practical implementation and protocol analysis.
+
+The study began with the architecture of PROFINET, including the roles of the IO Controller, IO Device and IO Supervisor, before progressing to the design decisions that distinguish industrial communication from conventional enterprise networking. Particular attention was given to deterministic communication, cyclic data exchange, and the protocol's decision to operate directly over Ethernet using EtherType `0x8892` instead of TCP/IP for real-time traffic.
+
+After establishing the protocol fundamentals, the internal structure of a PROFINET RT frame was studied in detail. Each protocol field—FrameID, CycleCounter, DataStatus and TransferStatus—was analysed from both an operational perspective and an intrusion detection perspective to understand how protocol semantics can later be transformed into measurable IDS features.
+
+The theoretical study was then reinforced through practical implementation. A minimal but structurally valid PROFINET RT frame was constructed in Python using Scapy, inspected field-by-field, validated against protocol rules, and manually annotated at the byte level. This implementation provided practical verification that the protocol structure understood during the literature review matched the actual bytes transmitted on the network.
+
+The final stage of the week shifted from protocol understanding towards statistical modelling. Cyclic communication, inter-arrival time (IAT), timing jitter and baseline traffic characteristics were studied to establish the concept of "normal" industrial communication. These observations form the statistical foundation required for feature extraction and machine learning-based anomaly detection in the later stages of the project.
+
+Overall, Week 3 established the protocol knowledge, implementation experience and baseline modelling necessary before generating industrial traffic and developing an Industrial Intrusion Detection System.
+
+---
+
+# Deliverables
+
+| File | Purpose |
+|------|---------|
+| `week3/profinet_frame.py` | Constructs and validates a minimal PROFINET RT frame using Scapy. |
+| `week3/frame_annotation.md` | Documents every transmitted byte and maps each field to its protocol meaning. |
+| `protocol_notes/profinet_overview.md` | Notes on PROFINET architecture, communication model and industrial networking concepts. |
+| `protocol_notes/frame_structure.md` | Field-level explanation of the PROFINET RT frame with IDS relevance. |
+| `protocol_notes/cyclic_communication.md` | Statistical timing model, cyclic communication behaviour and baseline characteristics. |
+| `protocol_notes/sources.md` | Transparent documentation of references, methodology and protocol sources. |
+
+---
+
+# Skills Developed
+
+During this week the following practical skills were developed:
+
+- Understanding Industrial Ethernet communication.
+- Analysing PROFINET RT protocol fields.
+- Manual hexadecimal packet decoding.
+- Constructing Ethernet frames using Scapy.
+- Validating protocol structure programmatically.
+- Performing byte-level protocol annotation.
+- Identifying protocol fields useful for anomaly detection.
+- Understanding statistical baseline modelling for Industrial IDS.
+- Relating protocol semantics to future machine learning features.
+
+---
+
+# Key Research Insights
+
+## 1. Industrial communication prioritizes deterministic timing over perfect reliability.
+
+Unlike enterprise networks, industrial control systems often prefer predictable communication timing rather than retransmission of delayed packets. This explains why PROFINET RT communicates directly over Ethernet instead of TCP.
+
+---
+
+## 2. Protocol metadata contains more security information than process payload.
+
+Fields such as FrameID, CycleCounter, DataStatus and TransferStatus describe communication behaviour rather than application data. These fields provide valuable information for detecting replay attacks, communication faults and protocol anomalies.
+
+---
+
+## 3. Machine learning models never learn protocols directly.
+
+Industrial protocols must first be transformed into numerical features.
+
+Examples include:
+
+- CycleCounter delta
+- Inter-arrival Time
+- FrameID frequency
+- EtherType validation
+- Source MAC consistency
+- Timing variance
+
+Feature engineering therefore becomes the bridge between protocol analysis and anomaly detection.
+
+---
+
+# Challenges Encountered
+
+Several challenges were encountered during Week 3.
+
+- The official PROFINET IO Base Specification was not publicly accessible, requiring protocol understanding to be verified through multiple independent sources.
+- The Wireshark PROFINET dissector initially appeared difficult to interpret due to its size and implementation complexity.
+- Distinguishing protocol semantics from implementation details required repeated packet inspection and manual hexadecimal analysis.
+
+These limitations were addressed by combining Wireshark dissector analysis, public technical documentation, experimental validation and independent reasoning.
+
+---
+
+# Readiness Assessment
+
+At the conclusion of Week 3 I can confidently:
+
+- Explain the architecture of a PROFINET RT network.
+- Interpret every field within a PROFINET RT frame.
+- Decode the frame manually from a hexadecimal dump.
+- Construct a valid PROFINET RT frame using Python and Scapy.
+- Explain the purpose of FrameID, CycleCounter, DataStatus and TransferStatus.
+- Describe normal cyclic communication statistically.
+- Identify protocol fields that can be transformed into IDS features.
+
+---
+
+# Connection to Week 4
+
+Week 3 established **what** a valid PROFINET RT frame looks like.
+
+Week 4 will focus on **how those frames are generated continuously**.
+
+The manually constructed frame developed this week will evolve into a configurable traffic generator capable of producing realistic cyclic industrial traffic. Rather than generating isolated packets, the system will begin modelling complete industrial communication sessions that will later serve as the baseline dataset for feature extraction and machine learning experiments.
+
+
 # Day 1 — Week 3 — PROFINET Fundamentals
 
 **Date:** 12/06/2026  
