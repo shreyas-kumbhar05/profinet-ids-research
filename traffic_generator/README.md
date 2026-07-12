@@ -1,89 +1,173 @@
-# Traffic Generator
+# Traffic Generator — PROFINET RT Baseline
 
-## Module Purpose
+## What This Module Does
 
-The Traffic Generator module is responsible for producing deterministic PROFINET RT communication that closely resembles the cyclic behaviour of industrial automation systems. The generated traffic serves as the baseline dataset for feature extraction, anomaly injection, and machine learning experiments developed in the later stages of this project.
+This module generates PROFINET RT cyclic traffic that behaves like
+a real IO Controller communicating with field devices on an industrial
+network. The output is used as the normal class baseline for training
+the anomaly detection models in later stages of this project.
 
-Unlike packet replay tools, this module constructs protocol-compliant frames programmatically while controlling communication timing, packet frequency, and protocol metadata.
-
----
-
-# Background Study
-
-## Motivation
-
-The primary objective of the traffic generator is not simply to transmit valid PROFINET RT frames, but to reproduce the temporal behaviour of an industrial control network with sufficient fidelity for machine learning experiments.
-
-Unlike conventional software applications, where occasional timing inaccuracies are often acceptable, Industrial Ethernet protocols rely on deterministic communication. Consequently, the timing characteristics of generated traffic become part of the experimental methodology rather than merely an implementation detail.
-
-For this reason, the timing mechanism used by the generator was investigated before any implementation work began.
+The key difference from a packet replay tool is that frames are
+constructed programmatically with full control over timing, cycle
+counter values, and protocol fields — so the traffic can be made
+to look normal, or deliberately broken, depending on what the
+experiment needs.
 
 ---
 
-## Python Timing Mechanisms Evaluated
+## Study Notes — Before Writing Any Code
 
-Two functions from Python's `time` module were studied because they directly influence the temporal behaviour of the generated traffic.
-
-### `time.sleep()`
-
-`time.sleep()` suspends program execution for at least the requested duration. The operating system scheduler determines the exact wake-up time, meaning the actual delay may be slightly longer than requested depending on system load and scheduling latency.
-
-Although suitable for introducing delays, `time.sleep()` alone cannot guarantee deterministic communication intervals.
-
-### `time.perf_counter_ns()`
-
-`time.perf_counter_ns()` provides a monotonic, high-resolution timer with nanosecond precision. Unlike wall-clock time, this timer is specifically intended for measuring elapsed execution time and is unaffected by system clock adjustments.
-
-Its primary role in this project is to measure the actual execution time of each communication cycle so that timing errors can be compensated rather than accumulated.
+I studied the timing problem before touching the implementation
+because getting the cycle time wrong would corrupt the training
+dataset — and a corrupted baseline means the ML model learns
+the wrong definition of "normal".
 
 ---
 
-## Timing Drift
+### Python Timing — What I Studied
 
-An important observation made during the design study is that communication loops contain two distinct components:
+**Source:** docs.python.org/3/library/time.html
+**Focus:** `time.sleep()` and `time.perf_counter_ns()`
 
-- Frame generation and processing time.
-- Intentional waiting time.
+---
 
-A naïve implementation that repeatedly performs:
+#### time.sleep()
+
+Suspends execution for at least the requested duration.
+The OS scheduler decides when to actually wake the process,
+so the real delay is always slightly longer than requested.
+
+The key word is "at least" — sleep(0.004) might actually
+sleep for 0.0042 or 0.0043 seconds depending on what else
+the system is doing. Fine for most things, but a problem
+when you need 250 frames per second consistently.
+
+---
+
+#### time.perf_counter_ns()
+
+High-resolution monotonic timer, returns nanoseconds as an integer.
+Not affected by system clock changes. Specifically designed for
+measuring elapsed time in performance-sensitive code.
+
+I'll use this to measure how long each cycle actually took,
+then compensate the next sleep to stay on the ideal timeline.
+
+---
+
+#### The Drift Problem
+
+This is what made the timing study necessary before coding.
+
+A naive loop looks like this:
 
 ```python
-send_frame()
-time.sleep(target_cycle)
+while True:
+    send_frame()
+    time.sleep(0.004)   # 4ms
 ```
 
-does not produce the desired cycle period because the frame construction time is added to the requested sleep duration.
+The problem is that `send_frame()` itself takes time.
+If frame construction takes 0.6ms, the actual cycle is:
 
-For example:
+```
+0.6ms (construction) + 4.0ms (sleep) = 4.6ms per cycle
+```
 
-| Operation | Time |
-|-----------|------|
-| Frame construction | 0.6 ms |
-| Requested sleep | 4.0 ms |
-| Actual communication cycle | 4.6 ms |
+That gives ~217 fps instead of the intended 250 fps.
 
-The resulting frame rate becomes approximately 217 frames per second rather than the intended 250 frames per second.
+Over a 10-minute capture that means:
 
-Although the error appears small for a single communication cycle, it accumulates continuously throughout long-duration experiments.
+```
+Expected: 250 × 600 = 150,000 frames
+Actual:   217 × 600 = 130,200 frames
+```
 
----
-
-## Importance of Long-Term Timing Accuracy
-
-The traffic generator is expected to produce baseline datasets consisting of hundreds of thousands of frames.
-
-A timing error of only a few hundred microseconds per communication cycle accumulates over time, causing the generated traffic to deviate from the intended statistical baseline.
-
-Such drift changes the observed distribution of inter-arrival times and may bias later stages of feature extraction and machine learning training.
-
-Maintaining long-term timing accuracy is therefore necessary not only for protocol realism but also for preserving the validity of the experimental dataset.
+About 20,000 missing frames — and the IAT distribution
+shifts from 4.0ms mean to 4.6ms mean. The feature extractor
+in Week 5 would then learn the wrong baseline statistics.
 
 ---
 
-##  Design Decision
+#### The Fix — Compensated Timing
 
-The following implementation will be based on a compensated scheduling algorithm that maintains communication relative to an ideal timeline instead of repeatedly delaying for a fixed duration.
+Instead of sleeping for a fixed duration each cycle,
+the generator will calculate the next ideal send time
+relative to the start, and sleep only for whatever
+remains:
 
-Based on the observations above, the traffic generator will not rely on repeated fixed-duration sleep intervals.
+```python
+cycle_ns     = 4_000_000        # 4ms in nanoseconds
+next_send_ns = time.perf_counter_ns()
 
-Instead, future implementation will schedule each transmission relative to an ideal communication timeline measured using `time.perf_counter_ns()`. This compensated scheduling approach prevents cumulative timing drift and more closely approximates deterministic industrial communication.
+while True:
+    send_frame()
+    next_send_ns += cycle_ns    # advance ideal timeline by 4ms
+    sleep_ns = next_send_ns - time.perf_counter_ns()
+    if sleep_ns > 0:
+        time.sleep(sleep_ns / 1_000_000_000)
+```
+
+The key insight: `next_send_ns` advances by exactly 4ms each
+iteration regardless of how long the frame took to build.
+The sleep compensates for whatever time was spent on construction.
+Drift doesn't accumulate because each cycle is anchored to
+the start, not to the previous frame.
+
+I'll add Gaussian jitter on top of this to simulate real
+network timing variance — but the compensated base keeps
+the long-term mean accurate even with jitter applied.
+
+---
+
+#### Why This Matters for the Dataset
+
+The training dataset will have ~150,000 frames.
+A timing error of a few hundred microseconds per cycle
+accumulates into a measurable shift in the IAT distribution.
+
+If the baseline IAT mean is 4.6ms instead of 4.0ms, then:
+- The feature extractor learns a shifted normal distribution
+- The anomaly detector uses the wrong threshold
+- Attack traffic timed at 4.0ms might appear anomalous
+
+Getting the timing right here prevents a systematic bias
+that would be very difficult to debug later in training.
+
+---
+
+[Day 2 content will be added here]
+
+---
+
+## Quick Start
+
+```bash
+# Default — 4ms cycle time, 10 minutes
+sudo python3 traffic_generator/generator.py
+
+# Short test run
+sudo python3 traffic_generator/generator.py --duration 30
+
+# Custom cycle time
+sudo python3 traffic_generator/generator.py --cycle-time 2.0
+```
+
+## Configuration
+
+All parameters are in `config.yaml`. Key ones:
+
+| Parameter | Default | What it Controls |
+|---|---|---|
+| `timing.cycle_time_ms` | 4.0 | Target cycle time |
+| `timing.jitter_std_ms` | 0.3 | Gaussian jitter std dev |
+| `capture.duration_seconds` | 600 | Run duration |
+| `profinet.frame_id` | 0x8001 | RT FrameID |
+| `profinet.payload_size` | 40 | IO data bytes |
+
+## Requirements
+
+```
+scapy
+pyyaml
+```
