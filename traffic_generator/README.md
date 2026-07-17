@@ -1,3 +1,4 @@
+
 # Traffic Generator — PROFINET RT Baseline
 
 ## What This Module Does
@@ -123,30 +124,39 @@ The next step is to study how real PROFINET networks maintain cyclic communicati
 
 ---
 
-# Current Module Status
 
-- [x] Python timing functions studied
-- [x] Timing drift understood
-- [x] Compensated scheduling algorithm designed
-- [ ] PROFINET timing model completed
-- [ ] Generator implementation
-- [ ] PCAP generation
-- [ ] Validation against baseline
+## Day 2 — 17/07/2026
 
----
+**Focus:** Reading and understanding a research paper related to my PROFINET IDS project.
 
-## Quick Start
+### Research Question
 
-*To be completed after `generator.py` is implemented.*
+How  does the research paper "Detecting Anomalies in Network Traffic Using Maximum Entropy Estimation" by Yu Gu, Andrew McCallum, Don Towsley Academic paper on network baseline modeling help me understand my project better
 
----
 
-## Configuration
+### Paper Details -  
+**Title:** Detecting Anomalies in Network Traffic Using Maximum Entropy Estimation  
+**Authors:** Yu Gu, Andrew McCallum, Don Towsley
+**Year:** 2005
+**Source:** https://www.usenix.org/legacy/event/imc05/tech/full_papers/gu/gu.pdf
 
-*To be completed after `config.yaml` is added.*
 
----
+### How they define baseline
+Baseline is defined as normal distribution of packet classes learnt from previously collected and cleaned network traffic. The new traffic is continously compared against the learned distribution, if difference becomes large, the traffic is considered abnormal 
 
-## Requirements
+### Detection of anomalous traffic
 
-*To be completed after dependencies are finalized.*
+The researchers compared the current traffic distribution to the learned baseline. Large deviations could be a sudden or gradual increase in the relative entropy, and are treated as anomalies
+
+
+### Dataset used
+
+They used a prelabelled dataset and the anomalies were labelled by human, and the labelled anomalous packets are removed
+
+
+### My observation
+This was my first academic paper on anomaly detection. I expected it to be heavily based on terms like network protocols, packets, and IDS, but it was mainly focused on mathematical terms like probability theory and information theory.
+
+I realised that many networking research papers rely heavily on mathematics to show the working of the detection methods, even when the implementation is relatively straightforward 
+
+
