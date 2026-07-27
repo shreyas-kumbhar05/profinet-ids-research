@@ -1,0 +1,23 @@
+# All timing values in milliseconds unless noted
+
+generator:
+  interface: "eth0"
+  src_mac: "08:00:27:a0:f4:9c"   # your Kali MAC — check using: ip a
+  dst_mac: "01:0e:cf:00:00:00"   # PROFINET IO multicast
+  ethertype: 0x8892
+
+profinet:
+  frame_id: 0x8001               # RT Class 3, valid: 0x8000-0xBFFF
+  data_status: 0x35              # running, valid, no fault
+  transfer_status: 0x00          # valid transfer
+  payload_size: 40               # bytes of simulated IO data
+
+timing:
+  cycle_time_ms: 4.0             # 4ms = 250 fps standard IO
+  jitter_std_ms: 0.3             # Gaussian std dev — realistic spread
+  jitter_max_ms: 1.0             # clip outliers beyond this
+
+capture:
+  duration_seconds: 600          # 10 minutes
+  output_pcap: "traffic_generator/captures/sample_normal.pcap"
+  log_interval: 250              # print stats every N frames

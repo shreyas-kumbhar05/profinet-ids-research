@@ -160,3 +160,119 @@ This was my first academic paper on anomaly detection. I expected it to be heavi
 I realised that many networking research papers rely heavily on mathematics to show the working of the detection methods, even when the implementation is relatively straightforward 
 
 
+---
+
+
+## Day 3 — 27/07/2026
+
+**Focus:** Designing the configuration system for the PROFINET traffic generator before implementing the generator itself.
+
+### Research Question
+
+How should the traffic generator be configured so that experiment parameters can be modified easily without changing the Python source code?
+
+---
+
+### Sources Studied
+
+**Real Python**
+
+https://realpython.com/python-yaml/
+
+Sections read
+
+- Basic YAML syntax
+- Nested keys
+- Comments
+- Loading YAML files using `yaml.safe_load()`
+
+**PyPI**
+
+https://pypi.org/project/PyYAML/
+
+Sections read
+
+- Basic usage
+- Loading configuration files
+
+**Python Documentation**
+
+https://docs.python.org/3/library/argparse.html
+
+Sections read
+
+- `ArgumentParser()`
+- `add_argument()`
+- `parse_args()`
+
+---
+
+### What I Found
+
+Initially, I thought configuration values such as the communication cycle time, payload size and MAC addresses could simply be defined as constants inside the Python program.
+
+While studying YAML, I realised that separating configuration from implementation makes the generator much easier to maintain. Instead of editing Python code every time I want to run a different experiment, I can modify only the configuration file.
+
+I also learned that YAML maps naturally to Python dictionaries when loaded using `yaml.safe_load()`. The nested structure in the YAML file becomes a nested dictionary, making configuration values straightforward to access inside the program.
+
+Finally, I studied Python's `argparse` module and found that configuration values can also be overridden from the command line without permanently modifying the configuration file. This allows temporary experiment-specific changes while keeping the default configuration unchanged.
+
+---
+
+### What I Initially Thought
+
+Before reading about YAML and PyYAML, I assumed configuration files were simply another way of storing text.
+
+I also expected that changing experiment parameters would always require editing the configuration file itself.
+
+After learning how `argparse` works, I realised that the configuration file only provides the default settings. Individual parameters can be overridden during program execution whenever required, allowing quick experiments without repeatedly editing and restoring the configuration file.
+
+---
+
+### Design Decision
+
+The traffic generator will use a dedicated `config.yaml` file containing four logical sections:
+
+- `generator`
+- `profinet`
+- `timing`
+- `capture`
+
+Grouping related parameters makes the configuration easier to understand and allows new sections to be added later without changing the overall structure.
+
+The generator will load this configuration only once when the program starts and store it as a Python dictionary. Every other function in the program will use this dictionary instead of repeatedly reading the configuration file.
+
+Command-line arguments will be used only for temporary overrides. The original `config.yaml` file will remain unchanged, ensuring that the default experiment configuration is always preserved.
+
+---
+
+### Why This Matters for My Project
+
+This project will eventually generate multiple datasets with different communication characteristics such as varying cycle times, payload sizes and capture durations.
+
+Keeping these parameters outside the source code makes experiments easier to reproduce and reduces the chance of accidentally modifying the implementation while changing experimental settings.
+
+Using a structured configuration file also makes the traffic generator more scalable, since additional protocol parameters and future attack scenarios can be incorporated without restructuring the program.
+
+---
+
+### Architecture Planned
+
+Before starting implementation, I planned the overall structure of `generator.py` to separate different responsibilities.
+
+The planned functions are:
+
+- `load_config()` — load the YAML configuration into a Python dictionary.
+- `build_frame()` — construct a PROFINET RT Ethernet frame.
+- `compute_jitter()` — generate realistic timing variation.
+- `print_stats()` — display runtime statistics.
+- `run_generator()` — execute the cyclic transmission loop.
+- `parse_args()` — process command-line overrides.
+
+Separating these responsibilities should make the implementation easier to understand, test and extend during later weeks of the project.
+
+---
+
+### Next Step
+
+The next step is to begin implementing `generator.py` using the planned architecture. The first objective will be loading the configuration file, constructing valid PROFINET RT frames and preparing the timing loop that will later generate the baseline traffic dataset.
