@@ -276,3 +276,115 @@ Separating these responsibilities should make the implementation easier to under
 ### Next Step
 
 The next step is to begin implementing `generator.py` using the planned architecture. The first objective will be loading the configuration file, constructing valid PROFINET RT frames and preparing the timing loop that will later generate the baseline traffic dataset.
+
+
+
+---
+
+
+
+## Day 4 — 18/07/2026
+
+**Focus:** Writing the first implementation of the PROFINET RT traffic generator and testing it on my Kali VM.
+
+---
+
+### Today's Goal
+
+The goal today was to combine everything I studied over the last few days into one working program. Instead of learning new concepts, most of the time was spent implementing them in Python and understanding how the different parts of the generator fit together.
+
+---
+
+### Building the Generator
+
+I started by implementing the functions I had planned yesterday instead of writing everything inside one large loop.
+
+The final structure looks like this:
+
+- `load_config()` – reads values from `config.yaml`
+- `build_frame()` – constructs one PROFINET RT Ethernet frame
+- `compute_jitter()` – generates Gaussian timing jitter
+- `print_stats()` – reports progress while the generator runs
+- `run_generator()` – controls the transmission loop
+- `parse_args()` – allows configuration overrides from the command line
+
+Breaking the program into small functions made the code much easier to read than I expected. When I needed to check something, I always knew which function was responsible for that part of the program.
+
+---
+
+### Reusing Previous Work
+
+While writing `build_frame()`, I realised that Week 3 saved me a lot of work.
+
+Instead of figuring out the PROFINET RT header again, I simply reused the same frame layout I had already studied. The only field that changes continuously is the CycleCounter, while the remaining protocol fields are loaded from `config.yaml`.
+
+That made the implementation much simpler than starting from scratch.
+
+---
+
+### Configuration Instead of Hardcoding
+
+Yesterday I wondered whether using a YAML file was worth the extra effort.
+
+After finishing today's implementation, I changed my mind.
+
+Almost every value used by the generator now comes from `config.yaml`, including the MAC addresses, payload size, cycle time and jitter values. The Python code no longer needs to change when I want to run a different experiment.
+
+Using `argparse` together with the configuration file also made more sense after seeing it in actual code rather than just reading the documentation.
+
+---
+
+### Something I Didn't Expect
+
+The first time I tried running the generator, it immediately failed with a `FileNotFoundError`.
+
+After checking the traceback, I realised I had executed the program from inside the `traffic_generator` directory. The configuration path inside the program is relative to the repository root, so Python looked for:
+
+traffic_generator/traffic_generator/config.yaml
+
+instead of:
+
+traffic_generator/config.yaml
+
+Running the program from the project root fixed the problem.
+
+This was a good reminder that Python resolves relative paths from the current working directory rather than from the location of the script itself.
+
+---
+
+### First Test Run
+
+After fixing the path issue, I ran the generator for 10 seconds.
+
+**Observed output**
+
+```text
+Expected FPS : 250.0
+Actual FPS   : 14.9
+Frames Sent  : 150
+Elapsed Time : 10.06 s
+```
+
+The program completed without crashing, but the transmission rate was much lower than expected.
+
+At this stage I don't know whether the bottleneck comes from Scapy, my virtual machine, the timing loop, or another part of the implementation.
+
+Instead of assuming the cause, I'll investigate it before using this generator to create the baseline dataset.
+
+---
+
+### What I Learned Today
+
+Today's work made me realise that writing code and verifying code are two different stages.
+
+From reading the implementation alone, everything looked correct. Only after running the program did I discover that the actual performance was far from what I expected.
+
+That is probably the biggest lesson from today. A program that runs without errors is not necessarily a program that behaves correctly.
+
+---
+
+### Next Step
+
+Before generating the baseline dataset, I need to understand why the generator is only producing around 15 FPS instead of 250 FPS.
+
+The next task will be to profile the transmission loop, identify the bottleneck and verify that the measured frame rate matches the configured cycle time before capturing traffic for later experiments.
