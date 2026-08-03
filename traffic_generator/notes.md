@@ -265,7 +265,7 @@ The next step is to begin implementing `generator.py` using the planned architec
 
 
 
-## Day 4 — 18/07/2026
+## Day 4 — 02/08/2026
 
 **Focus:** Writing the first implementation of the PROFINET RT traffic generator and testing it on my Kali VM.
 
@@ -370,3 +370,202 @@ That is probably the biggest lesson from today. A program that runs without erro
 Before generating the baseline dataset, I need to understand why the generator is only producing around 15 FPS instead of 250 FPS.
 
 The next task will be to profile the transmission loop, identify the bottleneck and verify that the measured frame rate matches the configured cycle time before capturing traffic for later experiments.
+
+
+---
+
+## Day 5 — 03/08/2026
+
+**Focus:** Debugging the traffic generator, generating the baseline dataset, and verifying the captured PROFINET RT traffic.
+
+### Research Question
+
+Can the traffic generator maintain the intended 4 ms communication cycle throughout a long capture, and if not, where is the timing error being introduced?
+
+---
+
+### Initial Observation
+
+Before beginning the scheduled verification work, I tested the generator with a short 10-second run to confirm that everything was working correctly.
+
+Although the program completed without any errors, the output was unexpected.
+
+Instead of producing approximately **250 frames per second**, the generator was only transmitting around **15 fps**. At that speed, a 10-minute capture would produce only a small fraction of the expected dataset, so I decided to stop and investigate the generator before continuing with the scheduled tasks.
+
+---
+
+### First Hypothesis
+
+My first assumption was that the compensated timing logic from Day 4 might be incorrect.
+
+Since the communication schedule depends entirely on `next_send_ns`, I initially suspected that the timing calculations were introducing unnecessary delays.
+
+After checking the timing calculations, the compensated scheduling algorithm appeared to be working correctly, so I looked elsewhere.
+
+---
+
+### Measuring the Cost of Packet Transmission
+
+To isolate the problem, I measured how long each packet transmission required.
+
+I temporarily wrapped the transmission call with a timer using `time.perf_counter()`.
+
+The results were surprising.
+
+Typical transmission times were between **40 ms and 90 ms** for a single packet.
+
+This immediately explained why the generator was only producing around **15–20 fps** despite targeting a 4 ms communication cycle.
+
+The delay was not coming from the timing loop itself but from the packet transmission function.
+
+---
+
+### Investigating sendp()
+
+The generator was originally using Scapy's `sendp()` function for every packet.
+
+After reading through Scapy's implementation and comparing it with the program behaviour, I realised that `sendp()` performs a considerable amount of work every time it is called.
+
+Even though this overhead is acceptable when sending a few packets, it becomes a major bottleneck when attempting to generate hundreds of Ethernet frames every second.
+
+---
+
+### Design Change
+
+Instead of repeatedly calling `sendp()`, I changed the generator to create a persistent Layer-2 socket once before entering the transmission loop.
+
+Frames are now transmitted directly through this socket for the remainder of the capture.
+
+The socket is closed in a `finally` block after the generator exits.
+
+This removes the repeated setup cost while keeping the program structure almost identical.
+
+---
+
+### Result
+
+After switching to a persistent Layer-2 socket, the improvement was immediate.
+
+A 10-second test now produced approximately **250 frames per second**, matching the expected communication rate.
+
+This confirmed that the original timing algorithm from Day 4 had not been the source of the performance issue.
+
+---
+
+### Verifying the Generated Traffic
+
+With the generator working correctly, I continued with the scheduled Day 5 work.
+
+I first reviewed the `tcpdump` EtherType filtering syntax and captured only frames with EtherType **0x8892** so that the capture would contain only PROFINET RT traffic.
+
+I then wrote `verify_capture.py` to analyse the generated PCAP file instead of relying only on Wireshark.
+
+The verification script checked:
+
+- Number of captured frames
+- Inter-arrival time statistics
+- CycleCounter behaviour
+- Frame IDs
+- Frame length consistency
+- Replay, dropped and out-of-order frames
+
+---
+
+### Verification Results
+
+The capture produced almost exactly the expected number of packets for a 10-minute run.
+
+The average inter-arrival time was also extremely close to the intended 4 ms communication cycle.
+
+The verification report showed:
+
+- Mean IAT ≈ **4.001 ms**
+- Approximately **150,000 frames**
+- No replay frames
+- No dropped CycleCounter values
+- No out-of-order packets
+- Valid PROFINET FrameID
+- Constant frame size
+
+All protocol-level checks passed successfully.
+
+---
+
+### Unexpected Result
+
+One value immediately stood out during verification.
+
+Although the average inter-arrival time matched the target almost perfectly, the measured standard deviation was around **3–4 ms**, significantly higher than the configured Gaussian jitter of **0.3 ms**.
+
+Since the generator itself appeared to be functioning correctly, I suspected that another factor was affecting the recorded timestamps.
+
+---
+
+### Additional Investigation
+
+Rather than immediately changing the implementation, I decided to investigate the behaviour further.
+
+I temporarily modified the verification script to print unusually large inter-arrival times.
+
+I also added temporary statistics showing:
+
+- Largest recorded delays
+- Number of IAT values above 10 ms
+- Distribution of inter-arrival times
+
+These debugging additions revealed that most packets were still arriving close to the intended 4 ms interval.
+
+Only a relatively small number of packets experienced much larger delays, with occasional gaps exceeding **300 ms**.
+
+Interestingly, these large gaps appeared at random positions throughout the capture rather than following any repeating pattern.
+
+CycleCounter values remained perfectly sequential even during these large timestamp gaps.
+
+This suggested that packets were not being lost or retransmitted.
+
+---
+
+### Alternative Timing Experiment
+
+I also experimented with a different compensated timing approach.
+
+Instead of adding jitter directly into the communication schedule, I applied jitter only to the calculated sleep duration.
+
+My expectation was that separating the ideal schedule from the operating system delay might reduce the recorded timing variance.
+
+After generating another capture, however, the measured standard deviation became slightly worse rather than better.
+
+Since the experiment did not improve the results, I reverted the generator to the previous implementation.
+
+---
+
+### External Verification
+
+At this point I wanted to determine whether the remaining timing variation was caused by my implementation or by the execution environment itself.
+
+I looked into the behaviour of Python's `time.sleep()` on standard Linux systems together with VirtualBox scheduling behaviour.
+
+The information I found consistently explained that general-purpose operating systems cannot guarantee deterministic wake-up times at the sub-millisecond level.
+
+Virtualization introduces additional scheduling delays because both the host operating system and the guest operating system participate in scheduling the virtual machine.
+
+This matched the behaviour I was observing experimentally.
+
+---
+
+### Final Conclusion
+
+By the end of the investigation, I was satisfied that the traffic generator itself was functioning correctly.
+
+The compensated timing algorithm maintained the intended communication schedule, the generator consistently achieved approximately **250 frames per second**, and all protocol-level verification checks passed successfully.
+
+The remaining variation in recorded inter-arrival times appears to be a limitation of running Python inside a VirtualBox virtual machine rather than an implementation error in the traffic generator itself.
+
+Instead of continuing to modify working code, I decided to keep the stable implementation and document this limitation as part of the experimental results.
+
+---
+
+### Next Step
+
+The next stage is to improve the module documentation of README.md
+---
