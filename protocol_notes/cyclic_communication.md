@@ -70,3 +70,66 @@ These are calculated over multiple packets and provide the baseline learned by m
 - Using Gaussian jitter results in a baseline that more closely resembles real industrial communication than perfectly periodic traffic. Machine learning models subsequently learn this statistical distribution and identify future timing deviations as anomalies.
 
 - The baseline defined in this document will later serve as the reference dataset for feature extraction and anomaly detection. Planned machine learning models, including Isolation Forest and LSTM, will learn the statistical characteristics of this baseline to identify deviations during runtime
+
+
+
+
+
+## Observed vs Expected — Week 4 Generator Results
+
+| Metric | Expected | Observed |
+|---|---|---|
+| IAT mean | 4.000ms | ~4.001ms |
+| IAT std dev | ~0.300ms | ~3–4ms |
+| Total frames (10 min) | 150,000 | ~150,000 |
+| CycleCounter anomalies | 0 | 0 |
+
+**Assessment:** Mean timing accuracy matches the target almost exactly,
+confirming that the compensated timing algorithm and protocol logic are
+working correctly. The measured standard deviation is higher than the
+configured 0.3ms Gaussian jitter due to sporadic large delays
+(occasionally exceeding 300ms) occurring at random positions throughout
+the capture. These delays are not periodic and are not associated with
+CycleCounter anomalies, which remained perfectly sequential.
+
+---
+
+## Investigation of Elevated IAT Variance
+
+To investigate the increased timing variance, additional debugging
+instrumentation was temporarily added to the verification script.
+
+The investigation showed that most frames were transmitted within the
+expected 4ms interval, while only a relatively small number of packets
+experienced isolated large delays.
+
+An alternative compensated timing implementation was also evaluated,
+where Gaussian jitter was applied only to the calculated sleep duration
+instead of the communication schedule itself. This modification did not
+reduce the observed variance, suggesting that the timing algorithm was
+not the primary source of the large delays.
+
+**Most likely cause:** Python's `time.sleep()` on Linux provides only a
+minimum waiting guarantee rather than deterministic wake-up timing.
+Actual scheduling is controlled by the operating system scheduler.
+Running inside VirtualBox introduces an additional scheduling layer
+between the guest and host operating systems, increasing the likelihood
+of occasional scheduling delays. This behaviour is consistent with the
+experimental observations and is considered an environmental limitation
+rather than a defect in the generator implementation.
+
+---
+
+## Limitation for Paper — Discussion Section
+
+This behaviour is documented as a limitation of the current
+implementation.
+
+Although the generator maintains accurate long-term timing
+(mean IAT ≈ 4ms), userspace Python running inside a virtualized
+environment cannot guarantee sub-millisecond timing determinism in the
+same way as dedicated PROFINET hardware operating on real-time systems.
+
+Future work could investigate kernel-level scheduling
+(e.g. `SCHED_FIFO`), PREEMPT_RT Linux kernels, or bare-metal execution
+to reduce timing variance.

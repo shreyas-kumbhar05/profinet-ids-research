@@ -14,3 +14,20 @@ generator to produce both normal industrial traffic and controlled
 attack scenarios later in the project.
 
 ---
+
+
+
+## Known Limitations
+
+The generator maintains accurate long-term timing (mean IAT ≈ 4.001 ms
+for a 4.000 ms target), but the measured inter-arrival time standard
+deviation is higher than the configured Gaussian jitter when executed
+inside a VirtualBox virtual machine.
+
+This behaviour is caused by occasional operating system and hypervisor
+scheduling delays rather than protocol implementation errors.
+CycleCounter integrity remains unaffected, with no observed frame loss,
+replays or out-of-order packets.
+
+A detailed investigation of this behaviour is documented in
+`protocol_notes/cyclic_communication.md`.
