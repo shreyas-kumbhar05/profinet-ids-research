@@ -58,3 +58,53 @@ controller or device.
 
 The three scenarios therefore provide different forms of deviation from the
 normal PROFINET baseline instead of generating arbitrary abnormal traffic.
+
+
+## Pseudocode — Attack 1: Replay
+
+1. Load the 100 normal frames I already captured (Week 4/5 pcap)
+2. Wait 10 seconds doing nothing
+3. For each of those 100 frames, send it again unmodified
+4. Send them twice as fast as they were originally sent
+   (half the original gap between each send)
+5. What makes this "replay" and not just "resending": CycleCounter
+   values will NOT increment — they'll repeat exactly what was
+   already seen, which is the anomaly signal from Week 3/5
+
+## Pseudocode — Attack 2: Frame Spoofing
+
+1. Decide how many fake devices to simulate (e.g. 5)
+2. Generate that many random MAC addresses
+3. Loop: for each frame sent, pick one of those random MACs as
+   the source MAC instead of the real fixed IO Controller MAC
+4. Keep everything else about the frame normal (valid FrameID,
+   sequential CycleCounter per fake device)
+5. What makes this "spoofing": src_mac_known feature (Week 5)
+   will flip to False repeatedly — new MACs never seen in baseline
+
+## Pseudocode — Attack 3: Malformed Function Codes
+
+1. Build a normal frame using the same structure as profinet_frame.py
+2. Instead of FrameID = 0x8001 (valid), use a FrameID OUTSIDE
+   the valid range 0x8000-0xBFFF
+3. Pick a few different invalid values to vary the malformation
+   (e.g. 0x0001, 0xFFFF, 0x7000)
+4. Send these at normal cyclic timing so ONLY the FrameID is wrong
+5. What makes this detectable: frame_id_valid check (Week 3/5)
+   will fail — this is a pure header integrity violation
+
+
+
+### Implementation gap
+
+## Implementation Gap
+
+I understand the three attack concepts and their expected behaviour,
+but I struggle to translate the design into Python when starting from
+a blank file.
+
+The main difficulty is deciding the program structure, function
+breakdown, variables, control flow and the order in which the code
+should be written.
+
+This is something I need to practice during the implementation stage.
