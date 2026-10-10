@@ -121,3 +121,83 @@ The malformed attack changes the PROFINET FrameID, but FrameID is not currently 
 Isolation Forest learns the general structure of normal traffic and identifies unusual observations based on how easily they can be isolated. It produces binary anomaly predictions and continuous scores that can be used to evaluate detection performance.
 
 My experiment will show which attack types the model detects and misses when evaluated against the labeled dataset. The results will help identify the limitations of the current features and model.
+
+
+
+
+----
+
+
+## Day 2: Isolation Forest Paper and Evaluation Metrics
+
+### Paper Experiments
+
+The original Isolation Forest paper tested the algorithm on 11 real datasets and one synthetic dataset. The datasets covered different sizes, numbers of features, and proportions of anomalies. This helped evaluate how the algorithm performed under different conditions.
+
+The datasets included HTTP and SMTP traffic from KDD Cup 99, Annthyroid, Arrhythmia, Breastw, Forest Cover Type, Ionosphere, Pima, Satellite, Shuttle, Mammography, and the synthetic Mulcross dataset.
+
+The paper mainly used `AUC` and `processing time` to compare Isolation Forest with other methods, including ORCA, LOF, and Random Forest. 
+
+`AUC `measured how well the method separated normal and anomalous samples
+`processing time` showed the computational cost.
+
+Isolation Forest generally performed well compared with the other methods. The results also showed that smaller subsamples could provide good AUC with lower processing time. However, performance could be affected by high dimensional data and irrelevant features.
+
+One experiment trained the model using only normal data. This is relevant to PROFINET IDS because the model will learn from normal traffic and then be tested against attack traffic. 
+
+The paper showed that this approach could still work well, although the results depended on the dataset and training configuration.
+
+### Confusion Matrix
+
+A confusion matrix compares the actual class of each sample with the class predicted by the model.
+
+- **True Positive (TP)**: An attack sample correctly detected as an anomaly.
+- **False Positive (FP)**: A normal sample incorrectly flagged as an attack.
+- **True Negative (TN)**: A normal sample correctly identified as normal.
+- **False Negative (FN)**: An attack sample incorrectly identified as normal.
+
+For IDS, false negatives are important because an attack that goes undetected could affect the industrial network. False positives also matter because repeatedly flagging normal PROFINET traffic can make alerts less useful.
+
+### Precision, Recall and F1 Score
+
+Precision ensures how many samples flagged as attacks are actually attacks.
+
+Precision = TP / (TP + FP)
+
+Recall measures how many actual attack samples the model detects.
+
+Recall = TP / (TP + FN)
+
+F1 score combines precision and recall using their harmonic mean.
+
+F1 = 2 × (Precision × Recall) / (Precision + Recall)
+
+For an industrial IDS, recall is particularly important because missed attacks may go unnoticed. 
+
+However, precision also needs to be considered. A model that flags too much normal traffic can generate excessive false alerts. 
+
+F1 score provides a combined measure, but it should not replace examining false positives and false negatives separately.
+
+### ROC Curve and AUC
+
+The ROC curve plots the true positive rate against the false positive rate at different classification thresholds.
+
+The true positive rate measures the proportion of attacks detected. The false positive rate measures the proportion of normal samples incorrectly flagged as anomalies.
+
+AUC summarises the model's ability to rank anomalous samples above normal samples across different thresholds. An AUC of 1 indicates perfect ranking, while an AUC of 0.5 indicates performance equivalent to random ranking.
+
+AUC is useful because it evaluates the model across different thresholds instead of depending on a single threshold. However, it does not directly tell us how many false alerts will occur at the threshold selected for deployment.
+
+### Classification Report
+
+Scikit-learn's `classification_report()` provides precision, recall, F1 score, and support for each class. Support is the number of actual samples belonging to that class.
+
+For this evaluation, the four dataset labels need to be mapped to binary classes because Isolation Forest predicts normal or anomalous traffic. 
+
+Normal traffic will be class 0, while replay, spoofing, and malformed traffic will all be class 1 for binary evaluation. The original `attack_type` column should still be retained so that the results can be examined separately for each attack type.
+
+This is important because a good overall score does not guarantee that every attack type is being detected.
+
+### Paper Reference
+
+Liu, F. T., Ting, K. M., and Zhou, Z. H. (2008). Isolation Forest. In *Proceedings of the Eighth IEEE International Conference on Data Mining*, pp. 413-422. IEEE. DOI: 10.1109/ICDM.2008.17.
