@@ -1,14 +1,14 @@
 # PROFINET IDS — ML-Based Anomaly Detection for Industrial Protocol Traffic
 
-**Status:** In Progress — Week 1 of 20
+**Status:**
+ In Progress — Week 7 of 20
+Expected Completion (Project) - Early December 2026 (approx by Week 15)
+Expected Publication - Mid to Late December 2026 (By Week 20 or 21)
 
 ## Research Question
 Can a lightweight ML model detect replay attacks, frame spoofing, 
 and malformed function codes in PROFINET traffic with detection 
 latency low enough for real-time industrial deployment?
-
-## Project Structure
-- /week1 — Binary foundations and Python networking basics
 
 ## Paper
 Preprint will be posted to arXiv on completion.
