@@ -1,4 +1,4 @@
-# Isolation Forest — Study Notes
+\# Isolation Forest — Study Notes
 
 ## Core Algorithm Concept
 
@@ -201,3 +201,44 @@ This is important because a good overall score does not guarantee that every att
 ### Paper Reference
 
 Liu, F. T., Ting, K. M., and Zhou, Z. H. (2008). Isolation Forest. In *Proceedings of the Eighth IEEE International Conference on Data Mining*, pp. 413-422. IEEE. DOI: 10.1109/ICDM.2008.17.
+
+
+
+
+
+## Day 3: Studied Matplotlib and Designed Pseudocode 
+
+### Matplotlib
+
+I will be using Matplotlib to visualise the Isolation forest result. This includes creating graphs and saving them as image files.
+
+`plt.bar()` will be used to create a bar chart and can be used to compare normal, replay, spoofing and malformed traffic together in one chart
+
+`ConfusionMatrixDisplay` will be used to visualize confusion matrix. I will use it to show correctly classified samples, false visualise the alarms, and missed attacks more easily.
+
+To plot ROC curve `RocCurveDisplay` will be used. It will display true positive rate and false positive rate at different thresholds at a continuous prediction scores
+
+`plt.savefig()` saves a plot as an image file. I will save confusion matrix, ROC curve, and anomaly score distribution with it. 
+
+### Pseudocode: train.py
+
+1. Load `labeled_dataset.csv`.
+2. Extract only rows where `label == 0`. Normal traffic is represented by the label = 0.
+3. Grab four feature columns: `iat`, `frame_size`, `src_mac_known`, and `payload_entropy`.`label` and `attack_type`will be skipped for training as it might cause data leak.
+4. Create an Isolation Forest model by set `contamination=0.05` and `random_state=42`.
+5. Using `fit()`, train the model on normal traffic only. 
+6. Save the trained model as `saved_model.pkl`. I will use this as input for evaluation.py.
+
+### Pseudocode: evaluate.py
+
+1. Load the trained model from `saved_model.pkl`.
+2. Load the complete labelled dataset. Including Normal traffic and also all three attack types.
+3. Pull the same four feature columns. Keep the actual labels separate.
+4. Convert the actual labels to two classes. Normal traffic becomes `0`. Replay, spoofing, and malformed traffic become `1`.
+5. Run `predict()` on all feature rows. Isolation Forest outputs `1` for normal traffic and `-1` for anomalies. Convert these to `0` and `1` so they match my evaluation labels.
+6. Compare actual and predicted labels using `classification_report()`. Get precision, recall, F1 score, and support.
+7. Generate a confusion matrix using the binary labels. Display it as a heatmap and save it as `confusion_matrix.png`.
+8. Get continuous anomaly scores using `decision_function()` or `score_samples()`. Lower scores mean more anomalous samples.
+9. Use the anomaly scores to calculate and plot the ROC curve. Save as `roc_curve.png`.
+10. I will calculate the detection rate separately for replay, spoofing, and malformed traffic. This will show which attack types the model catches or misses.
+11. Finally, plot the anomaly score distributions for normal traffic and each attack type on the same histogram. Save it as `anomaly_score_distribution.png`.
