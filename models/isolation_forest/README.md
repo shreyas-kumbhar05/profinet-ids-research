@@ -1,4 +1,4 @@
-\# Isolation Forest — Study Notes
+# Study Notes for Isolation Forest
 
 ## Core Algorithm Concept
 
