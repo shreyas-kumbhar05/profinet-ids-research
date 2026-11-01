@@ -2,10 +2,10 @@
 
 ## Purpose
 
-This module is responsible for generating the normal PROFINET RT traffic
+This is responsible for generating the normal PROFINET RT traffic
 used throughout the rest of this project.
 
-Rather than replaying an existing packet capture, every Ethernet frame is
+Instead of replaying an existing packet capture, every Ethernet frame is
 built from scratch using configurable protocol fields, timing parameters
 and MAC addresses. This makes it possible to control the communication
 cycle and later extend the same generator to create abnormal traffic for
@@ -27,7 +27,7 @@ cd ~/profinet-ids-research
 
 The generator reads its settings from
 `traffic_generator/config.yaml`. The cycle time and duration can also be
-changed from the command line when needed.
+changed from the command line whenever needed.
 
 ### Generate Traffic
 
@@ -169,13 +169,14 @@ generator should produce results close to the following.
 
 ## Known Limitations
 
-The generator maintains accurate long-term timing (mean IAT ≈ 4.001 ms
-for a 4.000 ms target), but the measured inter-arrival time standard
-deviation is higher than the configured Gaussian jitter when executed
-inside a VirtualBox virtual machine.
+Since I am running this experiment inside a virtual Kali machine, the measure inter - arrival time 
+is higher than the configured Gussian Jitter value.
 
-This behaviour is caused by occasional operating system and hypervisor
+
+I investigated this issue and the most probable cause is that this behaviour 
+is caused by occasional operating system and hypervisor
 scheduling delays rather than protocol implementation errors.
+
 CycleCounter integrity remains unaffected, with no observed frame loss,
 replays or out-of-order packets.
 
@@ -220,7 +221,7 @@ unnecessarily large PCAP.
 
 ### Why Gaussian jitter?
 
-Real industrial communication is never perfectly periodic. Small timing
+Real industrial communication is never perfectly periodic therefore sSmall timing
 variations are expected because of operating system scheduling, network
 stack latency and switching delays. A Gaussian distribution models this
 behaviour more realistically than choosing timing offsets uniformly.
