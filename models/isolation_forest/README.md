@@ -1,6 +1,6 @@
 
 ## Isolation Forest
-Contains the trained Isolation Forest model. Can detect anomalies in traffic by being trained on normal PROFINET traffic.
+Contains the trained Isolation forest model which can detect anomalies in traffic by being trained on normal PROFINET traffic.
 
 ## Methodology
 
@@ -10,12 +10,12 @@ The model was trained using only normal samples from `dataset/labeled_dataset.cs
 
 ## Input Features
 
-- These are the 4 features taken from PROFINET traffic.
+These are the 4 features taken from PROFINET traffic:
 
-**iat:** Time between two consecutive frames.
-**frame_size:** Size in bytes of the ethernet frame.
-**src_mac_known:** Boolean value if the source MAC address is known from the normal baseline.
-**payload_entropy:** Shannon entropy of the PROFINET IO data.
+- **iat:** Time between two consecutive frames.
+- **frame_size:** Size in bytes of the ethernet frame.
+- **src_mac_known:** Boolean value if the source MAC address is known from the normal baseline.
+- **payload_entropy:** Shannon entropy of the PROFINET IO data.
 
 The label and attack_type columns are not used, as they are the answers.
 
